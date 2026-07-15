@@ -347,26 +347,61 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     let name = mainItem.value;
     let unit = mainUnit.value;
     
+    // 1. Resolve Dynamic "Add New" Flyout Fields first
     if(category === '__NEW_CAT__') {
         category = document.getElementById('new-cat-fly').value.trim();
-        if(!db.categories.includes(category)) {
-            db.categories.push(category);
-            db.items[category] = [];
-        }
     }
     if(name === '__NEW_ITEM__') {
         name = document.getElementById('new-item-fly').value.trim();
-        if(!db.items[category]) db.items[category] = [];
-        if(!db.items[category].includes(name)) db.items[category].push(name);
     }
     if(unit === '__NEW_UNIT__') {
         unit = flyUnitInput.value.trim();
-        if(!db.units.includes(unit)) db.units.push(unit);
     }
     
     const dateInput = document.getElementById('main-date').value;
-    const finalDate = dateInput ? new Date(dateInput) : new Date();
+    const amtInput = document.getElementById('main-amt').value;
 
+    // 2. --- STRICT VALIDATION GATEKEEPER ---
+    let validationErrors = [];
+
+    // Item Validation
+    if (!name || name === "" || name === "-- Select Item --") {
+        validationErrors.push("• Please select or type an Item Name.");
+    }
+
+    // Date Validation
+    if (!dateInput || dateInput === "" || isNaN(Date.parse(dateInput))) {
+        validationErrors.push("• Please choose a valid Date.");
+    }
+
+    // Amount Validation
+    const parsedAmt = parseFloat(amtInput);
+    if (amtInput.trim() === "" || isNaN(parsedAmt) || parsedAmt < 0) {
+        validationErrors.push("• Please enter a valid non-negative Amount (e.g., 0, 45, 120.50).");
+    }
+
+    // If any checks fail, block execution and show an alert
+    if (validationErrors.length > 0) {
+        alert("⚠️ Incomplete Entry:\n\n" + validationErrors.join("\n"));
+        return; // Halts the form submit entirely
+    }
+
+    // 3. Save to Local Configurations if values are valid new catalog inputs
+    if(mainCat.value === '__NEW_CAT__' && !db.categories.includes(category)) {
+        db.categories.push(category);
+        db.items[category] = [];
+    }
+    if(mainItem.value === '__NEW_ITEM__') {
+        if(!db.items[category]) db.items[category] = [];
+        if(!db.items[category].includes(name)) db.items[category].push(name);
+    }
+    if(mainUnit.value === '__NEW_UNIT__' && !db.units.includes(unit)) {
+        db.units.push(unit);
+    }
+    
+    const finalDate = new Date(dateInput);
+
+    // 4. Check for duplication
     if (isDuplicateEntry(name, finalDate.toISOString())) {
         const proceed = confirm(`⚠️ Duplicate Alert:\n"${name}" has already been logged on this date. Log another anyway?`);
         if (!proceed) return;
@@ -375,12 +410,18 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     saveConfig();
     
     const qty = mainQty.value;
-    const amt = document.getElementById('main-amt').value;
 
+    // 5. Construct structural validated data block
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
-        name, category, qty: parseFloat(qty), unit, amount: parseFloat(amt), status: "Delivered", comment: ""
+        name, 
+        category, 
+        qty: qty ? parseFloat(qty) : 0, 
+        unit, 
+        amount: parsedAmt, 
+        status: "Delivered", 
+        comment: ""
     };
 
     inventory.push(entry);
