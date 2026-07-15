@@ -43,9 +43,10 @@ function saveConfig() {
 function saveInventory() {
     localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
     triggerCloudPush();
+    renderDashboardLedger(); // Instantly update home view
 }
 
-// Push local data array as text/plain to circumvent browser pre-flight limits
+// Push local data array to Google Sheets Web App
 function triggerCloudPush() {
     if (!navigator.onLine || BACKEND_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT")) {
         setSyncStatus('Local Only');
@@ -69,10 +70,11 @@ function triggerCloudPush() {
     });
 }
 
-// Pull latest changes down on load (or manual trigger)
+// Pull latest changes down from Sheets
 function pullDatabaseFromSheet() {
     if (!navigator.onLine || BACKEND_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT")) {
         setSyncStatus('Local Only');
+        renderDashboardLedger();
         return;
     }
     setSyncStatus('Syncing...');
@@ -86,7 +88,9 @@ function pullDatabaseFromSheet() {
             setSyncStatus('Synced');
             console.log("Successfully pulled down data rows from Sheets.");
             
-            // Auto update UI if statement views are open
+            // Re-render UI components
+            renderDashboardLedger();
+            
             if(!document.getElementById('screen-reports').classList.contains('hidden')) {
                 const isBillScreenActive = !document.getElementById('vendor-bill-scope').disabled;
                 if(isBillScreenActive) {
@@ -100,6 +104,7 @@ function pullDatabaseFromSheet() {
     .catch(err => {
         setSyncStatus('Failed');
         console.error("Cloud pull failed:", err);
+        renderDashboardLedger();
     });
 }
 
@@ -121,7 +126,7 @@ function setSyncStatus(status) {
 }
 
 // ==========================================
-// 2. RATE RULES & UTILS
+// 2. RATE RULES, DUPLICATION, RENDERING & UTILS
 // ==========================================
 function getEffectiveRate(rateTimeline, targetDateStr) {
     const targetTime = new Date(targetDateStr || new Date()).setHours(0,0,0,0);
@@ -146,6 +151,37 @@ function isDuplicateEntry(itemName, targetDateISOString) {
     });
 }
 
+// Renders the 5 most recent activities on Dashboard
+function renderDashboardLedger() {
+    const container = document.getElementById('dashboard-recent-log');
+    if (!container) return;
+
+    if (inventory.length === 0) {
+        container.innerHTML = `<p class="text-xxs text-slate-400 italic py-2">No transaction entries. Add your first record above!</p>`;
+        return;
+    }
+
+    // Sort descending by date
+    const sorted = [...inventory].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    
+    let html = "";
+    sorted.forEach(entry => {
+        const d = new Date(entry.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const isAbsent = entry.status === 'Absent';
+        html += `
+            <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 p-2 rounded-xl text-xxs">
+                <div>
+                    <p class="font-bold text-slate-800">${entry.name} ${isAbsent ? '<span class="text-red-500">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-400">${d} | ${entry.qty} ${entry.unit} ${entry.comment ? `(${entry.comment})` : ''}</p>
+                </div>
+                <div class="text-right font-bold text-slate-700">
+                    <span>₹${parseFloat(entry.amount).toFixed(2)}</span>
+                </div>
+            </div>`;
+    });
+    container.innerHTML = html;
+}
+
 function showScreen(screenId) {
     document.getElementById('screen-dashboard').classList.add('hidden');
     document.getElementById('screen-settings').classList.add('hidden');
@@ -162,6 +198,7 @@ function showScreen(screenId) {
     if (screenId === 'dashboard') {
         tabMain.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs";
         initDashboardDropdowns();
+        renderDashboardLedger();
     } else if (screenId === 'reports') {
         tabReports.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs";
         initReportsWorkspace();
@@ -235,21 +272,21 @@ mainUnit.addEventListener('change', () => {
 
 document.getElementById('manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    let cat = mainCat.value;
+    let category = mainCat.value;
     let name = mainItem.value;
     let unit = mainUnit.value;
     
-    if(cat === '__NEW_CAT__') {
-        cat = document.getElementById('new-cat-fly').value.trim();
-        if(!db.categories.includes(cat)) {
-            db.categories.push(cat);
-            db.items[cat] = [];
+    if(category === '__NEW_CAT__') {
+        category = document.getElementById('new-cat-fly').value.trim();
+        if(!db.categories.includes(category)) {
+            db.categories.push(category);
+            db.items[category] = [];
         }
     }
     if(name === '__NEW_ITEM__') {
         name = document.getElementById('new-item-fly').value.trim();
-        if(!db.items[cat]) db.items[cat] = [];
-        if(!db.items[cat].includes(name)) db.items[cat].push(name);
+        if(!db.items[category]) db.items[category] = [];
+        if(!db.items[category].includes(name)) db.items[category].push(name);
     }
     if(unit === '__NEW_UNIT__') {
         unit = flyUnitInput.value.trim();
@@ -272,14 +309,13 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
-        name, cat, qty: parseFloat(qty), unit, amount: parseFloat(amt), status: "Delivered", comment: ""
+        name, category, qty: parseFloat(qty), unit, amount: parseFloat(amt), status: "Delivered", comment: ""
     };
 
     inventory.push(entry);
     saveInventory();
     
     e.target.reset();
-    alert(`Logged Successfully: ${name}`);
     initDashboardDropdowns();
 });
 
@@ -291,18 +327,18 @@ function quickLog(type, volumeMl = null) {
     const targetDateStr = dateInput ? new Date(dateInput).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
     const finalDate = new Date(targetDateStr);
     
-    let name, cat, qty, unit, cost;
+    let name, category, qty, unit, cost;
 
     if (type === 'newspaper') {
         const day = finalDate.getDay();
         const timeline = (day === 0 || day === 6) ? db.rates.newspaperWeekend : db.rates.newspaperWeekday;
         cost = getEffectiveRate(timeline, targetDateStr);
-        name = "Daily Newspaper"; cat = "Subscribed Bills"; qty = 1; unit = "Nos";
+        name = "Daily Newspaper"; category = "Subscribed Bills"; qty = 1; unit = "Nos";
     } else if (type === 'milk') {
         qty = volumeMl / 1000;
         const rate = getEffectiveRate(db.rates.milkPerLitre, targetDateStr);
         cost = qty * rate;
-        name = "Milk"; cat = "Dairy"; unit = "Litre";
+        name = "Milk"; category = "Dairy"; unit = "Litre";
     }
 
     if (isDuplicateEntry(name, finalDate.toISOString())) {
@@ -313,12 +349,11 @@ function quickLog(type, volumeMl = null) {
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
-        name, cat, qty, unit, amount: cost, status: "Delivered", comment: ""
+        name, category, qty, unit, amount: cost, status: "Delivered", comment: ""
     };
 
     inventory.push(entry);
     saveInventory();
-    alert(`Logged Quick ${name} for ${finalDate.toLocaleDateString('en-IN')}`);
 }
 
 function logAbsence() {
@@ -329,7 +364,7 @@ function logAbsence() {
     const finalDate = new Date(targetDateStr);
 
     let name = type === 'milk' ? "Milk" : "Daily Newspaper";
-    let cat = type === 'milk' ? "Dairy" : "Subscribed Bills";
+    let category = type === 'milk' ? "Dairy" : "Subscribed Bills";
     let unit = type === 'milk' ? "Litre" : "Nos";
 
     if (isDuplicateEntry(name, finalDate.toISOString())) {
@@ -340,12 +375,11 @@ function logAbsence() {
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
-        name, cat, qty: 0, unit, amount: 0, status: "Absent", comment: reason
+        name, category, qty: 0, unit, amount: 0, status: "Absent", comment: reason
     };
 
     inventory.push(entry);
     saveInventory();
-    alert(`Marked ${name} as absent (${reason})`);
     document.getElementById('absent-reason').value = "";
 }
 
@@ -415,7 +449,7 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
         const dateMatch = (d >= start && d <= end);
         if(!dateMatch) return false;
 
-        if (filter === 'category') return i.cat === target;
+        if (filter === 'category') return (i.category || i.cat) === target;
         if (filter === 'item') return i.name === target;
         return true;
     });
@@ -423,7 +457,7 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     let sum = 0;
     let listHtml = "";
     matched.forEach(i => {
-        sum += i.amount;
+        sum += parseFloat(i.amount);
         listHtml += `
             <div class="flex justify-between items-center text-xxs py-2 border-b border-slate-100 group">
                 <div>
@@ -431,7 +465,7 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
                     <p class="text-slate-400">${new Date(i.date).toLocaleDateString('en-IN')} | ${i.qty} ${i.unit} ${i.comment ? `(${i.comment})` : ''}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="font-bold text-slate-700">₹${i.amount.toFixed(2)}</span>
+                    <span class="font-bold text-slate-700">₹${parseFloat(i.amount).toFixed(2)}</span>
                     <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 hover:text-red-600 font-bold p-1">🗑️</button>
                 </div>
             </div>`;
@@ -493,16 +527,18 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                         </td>
                     </tr>`;
             } else {
-                const singleLitreRate = i.qty > 0 ? (i.amount / i.qty) : 0;
-                totalMilkCost += i.amount;
+                const itemQty = parseFloat(i.qty) || 0;
+                const itemAmount = parseFloat(i.amount) || 0;
+                const singleLitreRate = itemQty > 0 ? (itemAmount / itemQty) : 0;
+                totalMilkCost += itemAmount;
                 milkRowsHtml += `
                     <tr>
                         <td class="p-1.5 border-b">${cleanDateStr}</td>
-                        <td class="p-1.5 border-b text-center">${i.qty} L</td>
+                        <td class="p-1.5 border-b text-center">${itemQty} L</td>
                         <td class="p-1.5 border-b text-right">₹${singleLitreRate.toFixed(1)}</td>
                         <td class="p-1.5 border-b text-right font-bold">
                             <div class="flex justify-between items-center justify-end gap-1">
-                                <span>₹${i.amount.toFixed(0)}</span>
+                                <span>₹${itemAmount.toFixed(0)}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
                             </div>
                         </td>
@@ -511,6 +547,7 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
         }
 
         if (i.name.toLowerCase() === 'daily newspaper' && (scope === 'both' || scope === 'newspaper')) {
+            const itemAmount = parseFloat(i.amount) || 0;
             if (i.status === 'Absent') {
                 paperRowsHtml += `
                     <tr class="text-red-600 bg-red-50/50">
@@ -524,14 +561,14 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                         </td>
                     </tr>`;
             } else {
-                totalPaperCost += i.amount;
+                totalPaperCost += itemAmount;
                 paperRowsHtml += `
                     <tr>
                         <td class="p-1.5 border-b">${cleanDateStr} (${dayName})</td>
-                        <td class="p-1.5 border-b text-center">₹${i.amount.toFixed(0)}</td>
+                        <td class="p-1.5 border-b text-center">₹${itemAmount.toFixed(0)}</td>
                         <td class="p-1.5 border-b text-right font-bold">
                             <div class="flex justify-between items-center justify-end gap-1">
-                                <span>₹${i.amount.toFixed(0)}</span>
+                                <span>₹${itemAmount.toFixed(0)}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
                             </div>
                         </td>
