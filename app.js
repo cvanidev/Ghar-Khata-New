@@ -152,30 +152,59 @@ function isDuplicateEntry(itemName, targetDateISOString) {
 }
 
 // Renders the 5 most recent activities on Dashboard
+// Renders the 5 most recent activities on Dashboard
 function renderDashboardLedger() {
     const container = document.getElementById('dashboard-recent-log');
     if (!container) return;
 
-    if (inventory.length === 0) {
+    if (!inventory || inventory.length === 0) {
         container.innerHTML = `<p class="text-xxs text-slate-400 italic py-2">No transaction entries. Add your first record above!</p>`;
         return;
     }
 
-    // Sort descending by date
-    const sorted = [...inventory].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    // Sort descending by date, handling flexible date keys
+    const sorted = [...inventory].sort((a, b) => {
+        const dateA = new Date(a.date || a.timestamp || a.Date || Date.now());
+        const dateB = new Date(b.date || b.timestamp || b.Date || Date.now());
+        return dateB - dateA;
+    }).slice(0, 5);
     
     let html = "";
     sorted.forEach(entry => {
-        const d = new Date(entry.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        const isAbsent = entry.status === 'Absent';
+        // 1. Resolve Name / Item Name
+        const nameVal = entry.name || entry.item || entry.itemName || entry.Item || "Unknown Item";
+        
+        // 2. Resolve Date Safely
+        const rawDate = entry.date || entry.timestamp || entry.Date;
+        let dateDisplay = "No Date";
+        if (rawDate) {
+            const parsedDate = new Date(rawDate);
+            if (!isNaN(parsedDate)) {
+                dateDisplay = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            }
+        }
+
+        // 3. Resolve Quantity & Unit
+        const qtyVal = entry.qty !== undefined ? entry.qty : (entry.quantity || entry.Qty || 0);
+        const unitVal = entry.unit || entry.Unit || "";
+
+        // 4. Resolve Amount Safely
+        const rawAmt = entry.amount !== undefined ? entry.amount : (entry.total || entry.Amount || 0);
+        const amtVal = parseFloat(rawAmt);
+        const amtDisplay = isNaN(amtVal) ? "0.00" : amtVal.toFixed(2);
+
+        // 5. Resolve Comments and Absences
+        const isAbsent = (entry.status || entry.Status) === 'Absent';
+        const commentVal = entry.comment || entry.Comment || "";
+
         html += `
             <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 p-2 rounded-xl text-xxs">
                 <div>
-                    <p class="font-bold text-slate-800">${entry.name} ${isAbsent ? '<span class="text-red-500">[Absent]</span>' : ''}</p>
-                    <p class="text-slate-400">${d} | ${entry.qty} ${entry.unit} ${entry.comment ? `(${entry.comment})` : ''}</p>
+                    <p class="font-bold text-slate-800">${nameVal} ${isAbsent ? '<span class="text-red-500 font-semibold">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-400">${dateDisplay} | ${qtyVal} ${unitVal} ${commentVal ? `(${commentVal})` : ''}</p>
                 </div>
                 <div class="text-right font-bold text-slate-700">
-                    <span>₹${parseFloat(entry.amount).toFixed(2)}</span>
+                    <span>₹${amtDisplay}</span>
                 </div>
             </div>`;
     });
