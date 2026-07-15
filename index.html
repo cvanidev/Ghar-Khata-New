@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3775/3775211.png">
+    <link class="rounded-xl" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3775/3775211.png">
     
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style> 
@@ -16,7 +16,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Dynamic Printing Style overrides */
         @media print {
             body { background: white; color: black; padding: 0; margin: 0; }
             main { border: none !important; box-shadow: none !important; max-width: 100%; width: 100%; padding: 0; margin: 0; }
@@ -129,6 +128,13 @@
                 
                 <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-xl font-bold text-xs transition shadow-xs">Save Entry Row</button>
             </form>
+
+            <div class="border-t border-slate-100 pt-3">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📋 Recent Synced Activity</h3>
+                <div id="dashboard-recent-log" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 no-scrollbar">
+                    <p class="text-xxs text-slate-400 italic">Connecting to Google Sheets...</p>
+                </div>
+            </div>
         </div>
 
         <div id="screen-reports" class="hidden space-y-4">
