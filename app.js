@@ -152,7 +152,6 @@ function isDuplicateEntry(itemName, targetDateISOString) {
 }
 
 // Renders the 5 most recent activities on Dashboard
-// Renders the 5 most recent activities on Dashboard
 function renderDashboardLedger() {
     const container = document.getElementById('dashboard-recent-log');
     if (!container) return;
@@ -162,40 +161,78 @@ function renderDashboardLedger() {
         return;
     }
 
-    // Sort descending by date, handling flexible date keys
-    const sorted = [...inventory].sort((a, b) => {
-        const dateA = new Date(a.date || a.timestamp || a.Date || Date.now());
-        const dateB = new Date(b.date || b.timestamp || b.Date || Date.now());
-        return dateB - dateA;
+    // --- TEMPORARY DEBUG LINE ---
+    // This will display the exact raw structure of your first database row on screen!
+    const firstRowRaw = JSON.stringify(inventory[0]);
+    let debugHtml = `<div class="bg-slate-900 text-emerald-400 font-mono text-[9px] p-2 rounded-lg mb-2 overflow-x-auto whitespace-pre no-scrollbar"><strong>Raw Row Debug:</strong> ${firstRowRaw}</div>`;
+
+    // Sort descending by date
+    const sorted = [...inventory].filter(entry => {
+        // Exclude header row if the script accidentally sent it
+        if (Array.isArray(entry)) {
+            return entry[0] !== 'ID' && entry[0] !== 'id';
+        }
+        return true;
+    }).sort((a, b) => {
+        const getRawDate = (x) => {
+            if (Array.isArray(x)) return x[1]; // Column B
+            return x.date || x.timestamp || x.Date || Date.now();
+        };
+        return new Date(getRawDate(b)) - new Date(getRawDate(a));
     }).slice(0, 5);
     
-    let html = "";
+    let html = debugHtml; // Start with the debug banner
     sorted.forEach(entry => {
-        // 1. Resolve Name / Item Name
-        const nameVal = entry.name || entry.item || entry.itemName || entry.Item || "Unknown Item";
-        
-        // 2. Resolve Date Safely
-        const rawDate = entry.date || entry.timestamp || entry.Date;
+        let nameVal = "Unknown Item";
         let dateDisplay = "No Date";
-        if (rawDate) {
-            const parsedDate = new Date(rawDate);
-            if (!isNaN(parsedDate)) {
-                dateDisplay = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        let qtyVal = 0;
+        let unitVal = "";
+        let amtVal = 0;
+        let isAbsent = false;
+        let commentVal = "";
+
+        // FORMAT A: Raw Array Mapping (If Google Script returns values directly)
+        if (Array.isArray(entry)) {
+            // Mapping based on standard: [ID, Date, Name, Category, Qty, Unit, Amount, Status, Comment]
+            const rawDate = entry[1];
+            if (rawDate) {
+                const parsedDate = new Date(rawDate);
+                if (!isNaN(parsedDate)) {
+                    dateDisplay = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                } else {
+                    dateDisplay = String(rawDate).split('T')[0]; // fallback to raw string cut
+                }
             }
+            nameVal = entry[2] || "Unknown Item";
+            qtyVal = entry[4] !== undefined ? entry[4] : 0;
+            unitVal = entry[5] || "";
+            amtVal = parseFloat(entry[6]) || 0;
+            isAbsent = String(entry[7]).toLowerCase() === 'absent';
+            commentVal = entry[8] || "";
+        } 
+        // FORMAT B: Object Key Mapping
+        else if (typeof entry === 'object' && entry !== null) {
+            nameVal = entry.name || entry.item || entry.itemName || entry.Item || "Unknown Item";
+            
+            const rawDate = entry.date || entry.timestamp || entry.Date;
+            if (rawDate) {
+                const parsedDate = new Date(rawDate);
+                if (!isNaN(parsedDate)) {
+                    dateDisplay = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                }
+            }
+            
+            qtyVal = entry.qty !== undefined ? entry.qty : (entry.quantity || entry.Qty || 0);
+            unitVal = entry.unit || entry.Unit || "";
+            
+            const rawAmt = entry.amount !== undefined ? entry.amount : (entry.total || entry.Amount || 0);
+            amtVal = parseFloat(rawAmt) || 0;
+            
+            isAbsent = String(entry.status || entry.Status || "").toLowerCase() === 'absent';
+            commentVal = entry.comment || entry.Comment || "";
         }
 
-        // 3. Resolve Quantity & Unit
-        const qtyVal = entry.qty !== undefined ? entry.qty : (entry.quantity || entry.Qty || 0);
-        const unitVal = entry.unit || entry.Unit || "";
-
-        // 4. Resolve Amount Safely
-        const rawAmt = entry.amount !== undefined ? entry.amount : (entry.total || entry.Amount || 0);
-        const amtVal = parseFloat(rawAmt);
         const amtDisplay = isNaN(amtVal) ? "0.00" : amtVal.toFixed(2);
-
-        // 5. Resolve Comments and Absences
-        const isAbsent = (entry.status || entry.Status) === 'Absent';
-        const commentVal = entry.comment || entry.Comment || "";
 
         html += `
             <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 p-2 rounded-xl text-xxs">
