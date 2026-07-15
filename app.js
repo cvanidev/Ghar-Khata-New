@@ -162,7 +162,7 @@ function isDuplicateEntry(itemName, targetDateISOString) {
     });
 }
 
-// Renders the 5 most recent activities on Dashboard
+// Renders the 5 most recent activities on Dashboard (Clean Production Version)
 function renderDashboardLedger() {
     const container = document.getElementById('dashboard-recent-log');
     if (!container) return;
@@ -171,11 +171,6 @@ function renderDashboardLedger() {
         container.innerHTML = `<p class="text-xxs text-slate-400 italic py-2">No transaction entries. Add your first record above!</p>`;
         return;
     }
-
-    // --- TEMPORARY DEBUG LINE ---
-    // This will display the exact raw structure of your first database row on screen!
-    const firstRowRaw = JSON.stringify(inventory[0]);
-    let debugHtml = `<div class="bg-slate-900 text-emerald-400 font-mono text-[9px] p-2 rounded-lg mb-2 overflow-x-auto whitespace-pre no-scrollbar"><strong>Raw Row Debug:</strong> ${firstRowRaw}</div>`;
 
     // Sort descending by date
     const sorted = [...inventory].filter(entry => {
@@ -192,7 +187,7 @@ function renderDashboardLedger() {
         return new Date(getRawDate(b)) - new Date(getRawDate(a));
     }).slice(0, 5);
     
-    let html = debugHtml; // Start with the debug banner
+    let html = ""; // Clean start without debug banner
     sorted.forEach(entry => {
         let nameVal = "Unknown Item";
         let dateDisplay = "No Date";
@@ -202,16 +197,15 @@ function renderDashboardLedger() {
         let isAbsent = false;
         let commentVal = "";
 
-        // FORMAT A: Raw Array Mapping (If Google Script returns values directly)
+        // FORMAT A: Raw Array Mapping
         if (Array.isArray(entry)) {
-            // Mapping based on standard: [ID, Date, Name, Category, Qty, Unit, Amount, Status, Comment]
             const rawDate = entry[1];
             if (rawDate) {
                 const parsedDate = new Date(rawDate);
                 if (!isNaN(parsedDate)) {
                     dateDisplay = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                 } else {
-                    dateDisplay = String(rawDate).split('T')[0]; // fallback to raw string cut
+                    dateDisplay = String(rawDate).split('T')[0];
                 }
             }
             nameVal = entry[2] || "Unknown Item";
