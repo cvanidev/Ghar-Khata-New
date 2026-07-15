@@ -1,7 +1,18 @@
 // ==========================================
 // 1. CONFIGURATION, DATABASE BRIDGE & PWAs
 // ==========================================
-const BACKEND_API_URL = "https://script.google.com/macros/s/AKfycbzONERqJZJknMPc1E7qfNKeTTj0ZNii69yC88ydGxalbI0yFyRNVNg4EM1fwBIT7o0/exec";
+// Retrieve the saved API key or prompt the user for it
+let apiKey = localStorage.getItem('gk_api_key');
+if (!apiKey) {
+    apiKey = prompt("🔑 Enter your Ghar-Khata Secret Token to synchronize:");
+    if (apiKey) {
+        localStorage.setItem('gk_api_key', apiKey);
+    }
+}
+
+const BASE_URL = "https://script.google.com/macros/s/AKfycbzONERqJZJknMPc1E7qfNKeTTj0ZNii69yC88ydGxalbI0yFyRNVNg4EM1fwBIT7o0/exec";
+// Automatically appends the token to all incoming/outgoing network requests
+const BACKEND_API_URL = `${BASE_URL}?token=${apiKey}`;
 
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
