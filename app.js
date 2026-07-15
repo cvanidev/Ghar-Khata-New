@@ -343,65 +343,65 @@ mainUnit.addEventListener('change', () => {
 
 document.getElementById('manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
+    
+    // 1. Resolve raw select values or flyout input entries
     let category = mainCat.value;
     let name = mainItem.value;
     let unit = mainUnit.value;
     
-    // 1. Resolve Dynamic "Add New" Flyout Fields first
-    if(category === '__NEW_CAT__') {
-        category = document.getElementById('new-cat-fly').value.trim();
+    if (category === '__NEW_CAT__') {
+        const flyCat = document.getElementById('new-cat-fly');
+        category = flyCat ? flyCat.value.trim() : "";
     }
-    if(name === '__NEW_ITEM__') {
-        name = document.getElementById('new-item-fly').value.trim();
+    if (name === '__NEW_ITEM__') {
+        const flyItem = document.getElementById('new-item-fly');
+        name = flyItem ? flyItem.value.trim() : "";
     }
-    if(unit === '__NEW_UNIT__') {
-        unit = flyUnitInput.value.trim();
+    if (unit === '__NEW_UNIT__') {
+        unit = flyUnitInput ? flyUnitInput.value.trim() : "";
     }
     
     const dateInput = document.getElementById('main-date').value;
-    const amtInput = document.getElementById('main-amt').value;
+    const amtInput = document.getElementById('main-amt').value.trim();
+    const qtyInput = mainQty.value.trim();
 
     // 2. --- STRICT VALIDATION GATEKEEPER ---
     let validationErrors = [];
 
-    // Item Validation
-    if (!name || name === "" || name === "-- Select Item --") {
-        validationErrors.push("• Please select or type an Item Name.");
+    if (!name || name === "") {
+        validationErrors.push("• Please select or enter an Item Name.");
+    }
+    if (!dateInput || dateInput === "") {
+        validationErrors.push("• Date field cannot be left blank.");
+    }
+    if (amtInput === "" || isNaN(parseFloat(amtInput)) || parseFloat(amtInput) < 0) {
+        validationErrors.push("• Please enter a valid numerical Amount (₹0 or more).");
     }
 
-    // Date Validation
-    if (!dateInput || dateInput === "" || isNaN(Date.parse(dateInput))) {
-        validationErrors.push("• Please choose a valid Date.");
-    }
-
-    // Amount Validation
-    const parsedAmt = parseFloat(amtInput);
-    if (amtInput.trim() === "" || isNaN(parsedAmt) || parsedAmt < 0) {
-        validationErrors.push("• Please enter a valid non-negative Amount (e.g., 0, 45, 120.50).");
-    }
-
-    // If any checks fail, block execution and show an alert
+    // Stop execution and alert if validation fails
     if (validationErrors.length > 0) {
         alert("⚠️ Incomplete Entry:\n\n" + validationErrors.join("\n"));
-        return; // Halts the form submit entirely
+        return;
     }
 
-    // 3. Save to Local Configurations if values are valid new catalog inputs
-    if(mainCat.value === '__NEW_CAT__' && !db.categories.includes(category)) {
+    // 3. Save new configurations to the catalog database if they pass validation
+    if (mainCat.value === '__NEW_CAT__' && !db.categories.includes(category)) {
         db.categories.push(category);
         db.items[category] = [];
     }
-    if(mainItem.value === '__NEW_ITEM__') {
-        if(!db.items[category]) db.items[category] = [];
-        if(!db.items[category].includes(name)) db.items[category].push(name);
+    if (mainItem.value === '__NEW_ITEM__') {
+        if (!db.items[category]) db.items[category] = [];
+        if (!db.items[category].includes(name)) {
+            db.items[category].push(name);
+        }
     }
-    if(mainUnit.value === '__NEW_UNIT__' && !db.units.includes(unit)) {
+    if (mainUnit.value === '__NEW_UNIT__' && !db.units.includes(unit) && unit !== "") {
         db.units.push(unit);
     }
-    
+
     const finalDate = new Date(dateInput);
 
-    // 4. Check for duplication
+    // Duplicate Check Validation
     if (isDuplicateEntry(name, finalDate.toISOString())) {
         const proceed = confirm(`⚠️ Duplicate Alert:\n"${name}" has already been logged on this date. Log another anyway?`);
         if (!proceed) return;
@@ -409,17 +409,19 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
 
     saveConfig();
     
-    const qty = mainQty.value;
+    // Parse values safely (handle optional quantity fields)
+    const finalQty = qtyInput === "" ? "" : parseFloat(qtyInput);
+    const finalAmt = parseFloat(amtInput);
 
-    // 5. Construct structural validated data block
+    // 4. Construct entry and push to arrays
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
         name, 
         category, 
-        qty: qty ? parseFloat(qty) : 0, 
-        unit, 
-        amount: parsedAmt, 
+        qty: finalQty, 
+        unit: unit || "", 
+        amount: finalAmt, 
         status: "Delivered", 
         comment: ""
     };
@@ -427,6 +429,7 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     inventory.push(entry);
     saveInventory();
     
+    // Clear frontend interface view
     e.target.reset();
     initDashboardDropdowns();
 });
