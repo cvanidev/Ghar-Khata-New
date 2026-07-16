@@ -32,7 +32,7 @@ const DEFAULT_SYSTEM = {
         "Utilities / Gas": ["Electricity Bill", "Gas Cylinder"],
         "Scooter Upkeep": ["Scooter Maintenance", "Petrol"],
         "Society Maintenance": ["Society Maintenance Charges"],
-        "Subscribed Bills": ["Daily Newspaper"]
+        "Subscribed Bills": ["Newspaper"]
     },
     units: ["Kg", "Litre", "Packet", "Nos"],
     watchlist: [],
@@ -479,7 +479,7 @@ function quickLog(type, volumeMl = null) {
         const day = finalDate.getDay();
         const timeline = (day === 0 || day === 6) ? db.rates.newspaperWeekend : db.rates.newspaperWeekday;
         cost = getEffectiveRate(timeline, targetDateStr);
-        name = "Daily Newspaper"; category = "Subscribed Bills"; qty = 1; unit = "Nos";
+        name = "Newspaper"; category = "Subscribed Bills"; qty = 1; unit = "Nos";
     } else if (type === 'milk') {
         qty = volumeMl / 1000;
         const rate = getEffectiveRate(db.rates.milkPerLitre, targetDateStr);
@@ -509,7 +509,7 @@ function logAbsence() {
     const targetDateStr = dateInput ? new Date(dateInput).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
     const finalDate = new Date(targetDateStr);
 
-    let name = type === 'milk' ? "Milk" : "Daily Newspaper";
+    let name = type === 'milk' ? "Milk" : "Newspaper";
     let category = type === 'milk' ? "Dairy" : "Subscribed Bills";
     let unit = type === 'milk' ? "Litre" : "Nos";
 
@@ -692,7 +692,7 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
             }
         }
 
-        if (i.name.toLowerCase() === 'daily newspaper' && (scope === 'both' || scope === 'newspaper')) {
+        if (i.name.toLowerCase() === 'newspaper' && (scope === 'both' || scope === 'newspaper')) {
             const itemAmount = parseFloat(i.amount) || 0;
             if (i.status === 'Absent') {
                 paperRowsHtml += `
@@ -869,7 +869,7 @@ function renderSettingsWorkspace() {
     const allUniqueItems = [];
     Object.values(db.items).forEach(list => {
         list.forEach(i => {
-            if(!allUniqueItems.includes(i) && i.toLowerCase() !== 'milk' && i.toLowerCase() !== 'daily newspaper') {
+            if(!allUniqueItems.includes(i) && i.toLowerCase() !== 'milk' && i.toLowerCase() !== 'newspaper') {
                 allUniqueItems.push(i);
             }
         });
