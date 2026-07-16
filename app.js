@@ -46,7 +46,19 @@ const DEFAULT_SYSTEM = {
 let db = JSON.parse(localStorage.getItem('gk_v7_config')) || DEFAULT_SYSTEM;
 let inventory = JSON.parse(localStorage.getItem('gk_v7_inventory')) || [];
 
+// Helper function to sort item catalog lists alphabetically
+function alphabetizeCatalogItems() {
+    if (db.items) {
+        Object.keys(db.items).forEach(cat => {
+            if (Array.isArray(db.items[cat])) {
+                db.items[cat].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+            }
+        });
+    }
+}
+
 function saveConfig() {
+    alphabetizeCatalogItems();
     localStorage.setItem('gk_v7_config', JSON.stringify(db));
     if (typeof renderSettingsWorkspace === 'function') {
         renderSettingsWorkspace();
@@ -114,6 +126,7 @@ function pullDatabaseFromSheet() {
                     return sanitizedRow;
                 });
                 
+                alphabetizeCatalogItems();
                 localStorage.setItem('gk_v7_config', JSON.stringify(db));
                 localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
             } else {
@@ -325,8 +338,12 @@ const lblQty = document.getElementById('lbl-qty');
 const lblUnit = document.getElementById('lbl-unit');
 
 function initDashboardDropdowns() {
+    alphabetizeCatalogItems();
+    
     mainCat.innerHTML = '';
-    db.categories.forEach(c => mainCat.innerHTML += `<option value="${c}">${c}</option>`);
+    // Sort categories alphabetically
+    const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    sortedCategories.forEach(c => mainCat.innerHTML += `<option value="${c}">${c}</option>`);
     mainCat.innerHTML += `<option value="__NEW_CAT__">+ Add New Category...</option>`;
     
     mainUnit.innerHTML = '';
@@ -343,7 +360,9 @@ function syncItemsDropdown() {
     
     mainItem.innerHTML = '<option value="">-- Select Item --</option>';
     if(db.items[cat]) {
-        db.items[cat].forEach(i => mainItem.innerHTML += `<option value="${i}">${i}</option>`);
+        // Ensure items list is explicitly sorted safely
+        const sortedItems = [...db.items[cat]].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        sortedItems.forEach(i => mainItem.innerHTML += `<option value="${i}">${i}</option>`);
     }
     mainItem.innerHTML += `<option value="__NEW_ITEM__">+ Add New Item...</option>`;
     flyItemDiv.classList.add('hidden');
@@ -567,7 +586,8 @@ repFilterType.addEventListener('change', () => {
         repTargetSelect.innerHTML = "";
         
         if (val === 'category') {
-            db.categories.forEach(c => {
+            const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+            sortedCategories.forEach(c => {
                 repTargetSelect.innerHTML += `<option value="${c}">${c}</option>`;
             });
         } else if (val === 'item') {
@@ -575,7 +595,7 @@ repFilterType.addEventListener('change', () => {
             Object.values(db.items).forEach(list => {
                 list.forEach(i => { if(!allItems.includes(i)) allItems.push(i); });
             });
-            allItems.sort().forEach(item => {
+            allItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(item => {
                 repTargetSelect.innerHTML += `<option value="${item}">${item}</option>`;
             });
         }
@@ -847,6 +867,8 @@ function renderAlerts() {
 // 8. CONFIGURATION MANAGEMENT
 // ==========================================
 function renderSettingsWorkspace() {
+    alphabetizeCatalogItems();
+    
     const rateBox = document.getElementById('rates-container');
     rateBox.innerHTML = '';
     
@@ -878,7 +900,7 @@ function renderSettingsWorkspace() {
         });
     });
 
-    allUniqueItems.sort().forEach(itemName => {
+    allUniqueItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(itemName => {
         const checked = db.watchlist.includes(itemName) ? 'checked' : '';
         wlBox.innerHTML += `
             <label class="flex items-center gap-1.5 text-xxs font-semibold text-slate-600 cursor-pointer">
@@ -893,7 +915,11 @@ function renderSettingsWorkspace() {
     const catalogBox = document.getElementById('catalog-container');
     catalogBox.innerHTML = '';
     
-    db.categories.forEach(cat => {
+    // Sort categories when displaying workspace cards
+    const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    
+    sortedCategories.forEach(cat => {
+        // Items are already alphabetized by alphabetizeCatalogItems() up top
         let itemsHtml = (db.items[cat] || []).map((item, idx) => `
             <div class="flex justify-between items-center text-xxs bg-slate-50 p-1.5 rounded-lg border border-slate-100">
                 <span class="truncate pr-1">${item}</span>
@@ -959,7 +985,9 @@ function addCatalogItem(cat) {
     db.items[cat].push(val);
     saveConfig(); renderSettingsWorkspace();
 }
+// Adjusted mapping reference update to reflect structural change cleanly
 function deleteCatalogItem(cat, idx) {
+    // Get item name before splicing array to clear it properly from watchlists
     const name = db.items[cat][idx];
     db.watchlist = db.watchlist.filter(i => i !== name);
     db.items[cat].splice(idx, 1);
