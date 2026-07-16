@@ -375,10 +375,10 @@ mainUnit.addEventListener('change', () => {
 document.getElementById('manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
     
-    // 1. Resolve raw select values or flyout input entries
-    let category = mainCat.value;
-    let name = mainItem.value;
-    let unit = mainUnit.value;
+    // 1. Resolve values from your index.html selectors
+    let category = document.getElementById('main-cat').value;
+    let name = document.getElementById('main-item').value;
+    let unit = document.getElementById('main-unit').value;
     
     if (category === '__NEW_CAT__') {
         const flyCat = document.getElementById('new-cat-fly');
@@ -389,18 +389,20 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
         name = flyItem ? flyItem.value.trim() : "";
     }
     if (unit === '__NEW_UNIT__') {
+        const flyUnitInput = document.getElementById('new-unit-fly');
         unit = flyUnitInput ? flyUnitInput.value.trim() : "";
     }
     
     const dateInput = document.getElementById('main-date').value;
     const amtInput = document.getElementById('main-amt').value.trim();
-    const qtyInput = mainQty.value.trim();
     
-    // EXTRACTION: Grab the text typed into the Remarks field safely
+    // Capture shared quantities and comments lines safely
+    const mainQty = document.getElementById('main-qty');
+    const qtyInput = mainQty ? mainQty.value.trim() : "";
     const commentInput = document.getElementById('main-comment');
     const finalComment = commentInput ? commentInput.value.trim() : "";
 
-    // 2. --- STRICT VALIDATION GATEKEEPER ---
+    // 2. --- MANDATORY FORM FIELDS VALIDATION GATEKEEPER ---
     let validationErrors = [];
 
     if (!name || name === "") {
@@ -418,34 +420,35 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
         return;
     }
 
-    // 3. Save configuration updates to catalog data database
-    if (mainCat.value === '__NEW_CAT__' && !db.categories.includes(category)) {
+    // 3. Save updates to dynamic configuration object arrays
+    if (document.getElementById('main-cat').value === '__NEW_CAT__' && !db.categories.includes(category)) {
         db.categories.push(category);
         db.items[category] = [];
     }
-    if (mainItem.value === '__NEW_ITEM__') {
+    if (document.getElementById('main-item').value === '__NEW_ITEM__') {
         if (!db.items[category]) db.items[category] = [];
         if (!db.items[category].includes(name)) {
             db.items[category].push(name);
         }
     }
-    if (mainUnit.value === '__NEW_UNIT__' && !db.units.includes(unit) && unit !== "") {
+    if (document.getElementById('main-unit').value === '__NEW_UNIT__' && !db.units.includes(unit) && unit !== "") {
         db.units.push(unit);
     }
 
     const finalDate = new Date(dateInput);
 
-    if (isDuplicateEntry(name, finalDate.toISOString())) {
+    if (typeof isDuplicateEntry === 'function' && isDuplicateEntry(name, finalDate.toISOString())) {
         const proceed = confirm(`⚠️ Duplicate Alert:\n"${name}" has already been logged on this date. Log another anyway?`);
         if (!proceed) return;
     }
 
     saveConfig();
     
+    // Quantity can naturally fall back to an empty string if omitted
     const finalQty = qtyInput === "" ? "" : parseFloat(qtyInput);
     const finalAmt = parseFloat(amtInput);
 
-    // 4. Construct entry and push to arrays (Mapping finalComment here)
+    // 4. Construct payload row item
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
@@ -455,15 +458,19 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
         unit: unit || "", 
         amount: finalAmt, 
         status: "Delivered", 
-        comment: finalComment // Mapped perfectly to sync to Column 9 in your Sheet!
+        comment: finalComment
     };
 
     inventory.push(entry);
-    saveInventory();
+    if (typeof saveInventory === 'function') {
+        saveInventory();
+    }
     
-    // Clear frontend interface view
+    // Reset forms and redraw drop menus panels
     e.target.reset();
-    initDashboardDropdowns();
+    if (typeof initDashboardDropdowns === 'function') {
+        initDashboardDropdowns();
+    }
 });
 
 // ==========================================
