@@ -15,11 +15,37 @@ const BASE_URL = "https://script.google.com/macros/s/AKfycbzONERqJZJknMPc1E7qfNK
 const BACKEND_API_URL = `${BASE_URL}?token=${apiKey}`;
 
 // Register Service Worker for Mobile PWA
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker Registered Successfully', reg.scope))
+            .then(reg => {
+                console.log('Service Worker Registered Successfully');
+
+                // Check for updates manually on load
+                reg.update();
+
+                // Listen for an update waiting to be installed
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // A new service worker is waiting. Force it to skip waiting.
+                            newWorker.postMessage('SKIP_WAITING');
+                        }
+                    });
+                });
+            })
             .catch(err => console.error('Service Worker Registration Failed', err));
+    });
+
+    // Automatically reload the page once the new Service Worker activates and takes control
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
     });
 }
 
