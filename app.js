@@ -46,9 +46,12 @@ const DEFAULT_SYSTEM = {
 let db = JSON.parse(localStorage.getItem('gk_v7_config')) || DEFAULT_SYSTEM;
 let inventory = JSON.parse(localStorage.getItem('gk_v7_inventory')) || [];
 
-function saveConfig() { 
-    localStorage.setItem('gk_v7_config', JSON.stringify(db)); 
-    triggerCloudPush(); // Pushes new categories/items to cloud instantly!
+function saveConfig() {
+    localStorage.setItem('gk_v7_config', JSON.stringify(db));
+    if (typeof renderSettingsWorkspace === 'function') {
+        renderSettingsWorkspace();
+    }
+    triggerCloudPush(); // Pushes category rules to the cloud immediately!
 }
 
 // Write-Sync to Google Sheets
@@ -66,7 +69,7 @@ function triggerCloudPush() {
     }
     setSyncStatus('Syncing...');
     
-    // Package both transaction ledger and catalog configs together
+    // Bundle database settings and active transactions together
     const payload = {
         config: db,
         inventory: inventory
@@ -80,11 +83,11 @@ function triggerCloudPush() {
     })
     .then(() => {
         setSyncStatus('Synced');
-        console.log("State and Configs updated successfully in Google Sheet.");
+        console.log("State and Catalog configurations successfully synced to Google Sheets.");
     })
     .catch(err => {
         setSyncStatus('Failed');
-        console.error("Cloud push failed:", err);
+        console.error("Cloud push transmission failed:", err);
     });
 }
 
@@ -101,21 +104,32 @@ function pullDatabaseFromSheet() {
     .then(res => res.json())
     .then(data => {
         if (data && !data.error) {
-            // If backend is returning packaged object
+            
+            // Check if the server is returning the new packaged layout
             if (data.config && data.inventory) {
                 db = data.config;
-                inventory = data.inventory;
+                inventory = data.inventory.map(row => {
+                    const sanitizedRow = {};
+                    Object.keys(row).forEach(key => { sanitizedRow[key.trim()] = row[key]; });
+                    return sanitizedRow;
+                });
+                
                 localStorage.setItem('gk_v7_config', JSON.stringify(db));
+                localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
             } else {
-                // Fallback if sheet only returned raw inventory array
-                inventory = data;
+                // Fallback for legacy raw lists structures
+                const rawArr = Array.isArray(data) ? data : (data.inventory || []);
+                inventory = rawArr.map(row => {
+                    const sanitizedRow = {};
+                    Object.keys(row).forEach(key => { sanitizedRow[key.trim()] = row[key]; });
+                    return sanitizedRow;
+                });
+                localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
             }
-            
-            localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
+
             setSyncStatus('Synced');
-            console.log("Successfully pulled down data and settings from Sheets.");
             
-            // Re-render UI components
+            // Reinitialize inputs options drop-downs & charts views
             initDashboardDropdowns();
             renderDashboardLedger();
             
@@ -131,7 +145,7 @@ function pullDatabaseFromSheet() {
     })
     .catch(err => {
         setSyncStatus('Failed');
-        console.error("Cloud pull failed:", err);
+        console.error("Cloud synchronization download failed:", err);
         renderDashboardLedger();
     });
 }
