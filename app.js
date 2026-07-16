@@ -48,6 +48,7 @@ let inventory = JSON.parse(localStorage.getItem('gk_v7_inventory')) || [];
 
 function saveConfig() { 
     localStorage.setItem('gk_v7_config', JSON.stringify(db)); 
+    triggerCloudPush(); // Pushes new categories/items to cloud instantly!
 }
 
 // Write-Sync to Google Sheets
@@ -65,15 +66,21 @@ function triggerCloudPush() {
     }
     setSyncStatus('Syncing...');
     
+    // Package both transaction ledger and catalog configs together
+    const payload = {
+        config: db,
+        inventory: inventory
+    };
+    
     fetch(BACKEND_API_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(inventory)
+        body: JSON.stringify(payload)
     })
     .then(() => {
         setSyncStatus('Synced');
-        console.log("State updated successfully in Google Sheet.");
+        console.log("State and Configs updated successfully in Google Sheet.");
     })
     .catch(err => {
         setSyncStatus('Failed');
@@ -94,12 +101,22 @@ function pullDatabaseFromSheet() {
     .then(res => res.json())
     .then(data => {
         if (data && !data.error) {
-            inventory = data;
+            // If backend is returning packaged object
+            if (data.config && data.inventory) {
+                db = data.config;
+                inventory = data.inventory;
+                localStorage.setItem('gk_v7_config', JSON.stringify(db));
+            } else {
+                // Fallback if sheet only returned raw inventory array
+                inventory = data;
+            }
+            
             localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
             setSyncStatus('Synced');
-            console.log("Successfully pulled down data rows from Sheets.");
+            console.log("Successfully pulled down data and settings from Sheets.");
             
             // Re-render UI components
+            initDashboardDropdowns();
             renderDashboardLedger();
             
             if(!document.getElementById('screen-reports').classList.contains('hidden')) {
