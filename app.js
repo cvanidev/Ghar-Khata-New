@@ -963,12 +963,17 @@ function addRateRule(key) {
     }
 }
 function deleteRateRule(key, idx) {
-    if(db.rates[key].length === 1) {
+    if (db.rates[key].length === 1) {
         alert("Must retain at least one fallback rule!");
         return;
     }
-    db.rates[key].splice(idx, 1);
-    saveConfig(); renderSettingsWorkspace();
+    const rule = db.rates[key][idx];
+    // Added safety confirmation alert before timeline history deletion
+    if (confirm(`Delete the rate rule (Effective: ${rule.dateFrom}, Value: ₹${rule.val})?`)) {
+        db.rates[key].splice(idx, 1);
+        saveConfig(); 
+        renderSettingsWorkspace();
+    }
 }
 function deleteCategory(cat) {
     if(confirm(`Delete category "${cat}"?`)) {
@@ -987,11 +992,14 @@ function addCatalogItem(cat) {
 }
 // Adjusted mapping reference update to reflect structural change cleanly
 function deleteCatalogItem(cat, idx) {
-    // Get item name before splicing array to clear it properly from watchlists
     const name = db.items[cat][idx];
-    db.watchlist = db.watchlist.filter(i => i !== name);
-    db.items[cat].splice(idx, 1);
-    saveConfig(); renderSettingsWorkspace();
+    // Added safety prompt warning check before item removal
+    if (confirm(`Are you sure you want to delete "${name}" from the ${cat} catalog?`)) {
+        db.watchlist = db.watchlist.filter(i => i !== name);
+        db.items[cat].splice(idx, 1);
+        saveConfig(); 
+        renderSettingsWorkspace();
+    }
 }
 
 document.getElementById('form-add-cat-settings').addEventListener('submit', (e) => {
