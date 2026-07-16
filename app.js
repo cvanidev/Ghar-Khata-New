@@ -397,7 +397,6 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     const amtInput = document.getElementById('main-amt').value.trim();
     
     // Capture shared quantities and comments lines safely
-    const mainQty = document.getElementById('main-qty');
     const qtyInput = mainQty ? mainQty.value.trim() : "";
     const commentInput = document.getElementById('main-comment');
     const finalComment = commentInput ? commentInput.value.trim() : "";
@@ -462,15 +461,11 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     };
 
     inventory.push(entry);
-    if (typeof saveInventory === 'function') {
-        saveInventory();
-    }
+    saveInventory();
     
     // Reset forms and redraw drop menus panels
     e.target.reset();
-    if (typeof initDashboardDropdowns === 'function') {
-        initDashboardDropdowns();
-    }
+    initDashboardDropdowns();
 });
 
 // ==========================================
@@ -829,7 +824,7 @@ function renderAlerts() {
             diff += (dates[i] - dates[i-1]) / (1000 * 60 * 60 * 24);
         }
         const cycle = diff / (dates.length - 1);
-        const rem = Math.ceil((new Date(dates[dates.length-1].getTime() + (cycle*24*60*60*1000)) - new Date())/(1000*60*60*24));
+        const rem = Math.ceil((new Date(dates[dates.length-1].getTime() + (cycle*24*60*60*1000)) - new Date())/(1000 * 60 * 60 * 24));
         
         if(rem <= 5) {
             active = true;
