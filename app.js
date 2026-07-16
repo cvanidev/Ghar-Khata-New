@@ -395,6 +395,10 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     const dateInput = document.getElementById('main-date').value;
     const amtInput = document.getElementById('main-amt').value.trim();
     const qtyInput = mainQty.value.trim();
+    
+    // EXTRACTION: Grab the text typed into the Remarks field safely
+    const commentInput = document.getElementById('main-comment');
+    const finalComment = commentInput ? commentInput.value.trim() : "";
 
     // 2. --- STRICT VALIDATION GATEKEEPER ---
     let validationErrors = [];
@@ -409,13 +413,12 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
         validationErrors.push("• Please enter a valid numerical Amount (₹0 or more).");
     }
 
-    // Stop execution and alert if validation fails
     if (validationErrors.length > 0) {
         alert("⚠️ Incomplete Entry:\n\n" + validationErrors.join("\n"));
         return;
     }
 
-    // 3. Save new configurations to the catalog database if they pass validation
+    // 3. Save configuration updates to catalog data database
     if (mainCat.value === '__NEW_CAT__' && !db.categories.includes(category)) {
         db.categories.push(category);
         db.items[category] = [];
@@ -432,7 +435,6 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
 
     const finalDate = new Date(dateInput);
 
-    // Duplicate Check Validation
     if (isDuplicateEntry(name, finalDate.toISOString())) {
         const proceed = confirm(`⚠️ Duplicate Alert:\n"${name}" has already been logged on this date. Log another anyway?`);
         if (!proceed) return;
@@ -440,11 +442,10 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
 
     saveConfig();
     
-    // Parse values safely (handle optional quantity fields)
     const finalQty = qtyInput === "" ? "" : parseFloat(qtyInput);
     const finalAmt = parseFloat(amtInput);
 
-    // 4. Construct entry and push to arrays
+    // 4. Construct entry and push to arrays (Mapping finalComment here)
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
@@ -454,7 +455,7 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
         unit: unit || "", 
         amount: finalAmt, 
         status: "Delivered", 
-        comment: ""
+        comment: finalComment // Mapped perfectly to sync to Column 9 in your Sheet!
     };
 
     inventory.push(entry);
