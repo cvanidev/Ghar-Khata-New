@@ -844,7 +844,7 @@ function exportInvoicePDF() {
 }
 
 // ==========================================
-// 7. PREDICTIVE CRITICAL ALERTS
+// 7. PREDICTIVE CRITICAL ALERTS (QUANTITY AWARE)
 // ==========================================
 function renderAlerts() {
     const alertDiv = document.getElementById('stock-alerts');
@@ -854,31 +854,73 @@ function renderAlerts() {
         return;
     }
 
+    // Group inventory entries by item name
     const historyMap = {};
-    inventory.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(i => {
+    inventory.filter(i => i.status !== 'Absent').sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(i => {
         if(!historyMap[i.name]) historyMap[i.name] = [];
-        historyMap[i.name].push(new Date(i.date));
+        historyMap[i.name].push({
+            date: new Date(i.date),
+            qty: i.qty !== undefined && i.qty !== "" ? parseFloat(i.qty) : null
+        });
     });
     
     let active = false;
     db.watchlist.forEach(name => {
-        const dates = historyMap[name] || [];
-        if (dates.length < 3) return;
+        const entries = historyMap[name] || [];
+        if (entries.length < 3) return; // Need at least 3 points to determine a stable consumption pattern
         
-        let diff = 0;
-        for(let i=1; i<dates.length; i++) {
-            diff += (dates[i] - dates[i-1]) / (1000 * 60 * 60 * 24);
+        let totalDaysSpan = (entries[entries.length - 1].date - entries[0].date) / (1000 * 60 * 60 * 24);
+        if (totalDaysSpan <= 0) return;
+
+        // Check if any quantity values are missing in the item history chain
+        const hasMissingQty = entries.some(e => e.qty === null || isNaN(e.qty) || e.qty === 0);
+        
+        let daysToLast = 0;
+        
+        if (!hasMissingQty) {
+            // APPROACH A: QUANTITY + FREQUENCY AWARE
+            // Sum all quantities except the last one to see what was consumed over the total timeframe
+            let totalConsumedQty = 0;
+            for (let i = 0; i < entries.length - 1; i++) {
+                totalConsumedQty += entries[i].qty;
+            }
+            
+            // Calculate daily burn rate
+            const dailyBurnRate = totalConsumedQty / totalDaysSpan;
+            
+            if (dailyBurnRate > 0) {
+                // How long will the most recently purchased quantity last?
+                const lastPurchasedQty = entries[entries.length - 1].qty;
+                daysToLast = Math.ceil(lastPurchasedQty / dailyBurnRate);
+            } else {
+                // Fallback if burn rate computes to 0
+                daysToLast = 0;
+            }
+        } else {
+            // APPROACH B: PURE FREQUENCY FALLBACK (Original Logic)
+            let diff = 0;
+            for(let i = 1; i < entries.length; i++) {
+                diff += (entries[i].date - entries[i-1].date) / (1000 * 60 * 60 * 24);
+            }
+            const averageCycle = diff / (entries.length - 1);
+            daysToLast = Math.ceil(averageCycle);
         }
-        const cycle = diff / (dates.length - 1);
-        const rem = Math.ceil((new Date(dates[dates.length-1].getTime() + (cycle*24*60*60*1000)) - new Date())/(1000 * 60 * 60 * 24));
         
+        // Calculate remaining days from today based on the last purchase timestamp
+        const lastPurchaseDate = entries[entries.length - 1].date;
+        const estimatedExhaustionDate = new Date(lastPurchaseDate.getTime() + (daysToLast * 24 * 60 * 60 * 1000));
+        const rem = Math.ceil((estimatedExhaustionDate - new Date()) / (1000 * 60 * 60 * 24));
+        
+        // Trigger alert banner if stock is running low (due in 5 days or less)
         if(rem <= 5) {
             active = true;
             let theme = rem <= 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100';
-            let label = rem <= 0 ? `Overdue by ${Math.abs(rem)} days!` : `due in ${rem} days`;
+            let label = rem <= 0 ? `Overdue / Empty by ${Math.abs(rem)} days!` : `due in ${rem} days`;
+            let StrategyTag = !hasMissingQty ? '📊' : '⏱️'; // Visual hint for math mode vs time mode
+            
             alertDiv.innerHTML += `
                 <div class="flex justify-between p-2 rounded-lg border text-xxs font-medium ${theme}">
-                    <span>📦 <strong>${name}</strong></span>
+                    <span>${StrategyTag} <strong>${name}</strong></span>
                     <span>${label}</span>
                 </div>`;
         }
