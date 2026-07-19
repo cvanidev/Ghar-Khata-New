@@ -1,7 +1,6 @@
 // ==========================================
 // 1. CONFIGURATION, DATABASE BRIDGE & PWAs
 // ==========================================
-// Retrieve the saved API key or prompt the user for it
 let apiKey = localStorage.getItem('gk_api_key');
 if (!apiKey) {
     apiKey = prompt("🔑 Enter your Ghar-Khata Secret Token to synchronize:");
@@ -11,10 +10,8 @@ if (!apiKey) {
 }
 
 const BASE_URL = "https://script.google.com/macros/s/AKfycbzONERqJZJknMPc1E7qfNKeTTj0ZNii69yC88ydGxalbI0yFyRNVNg4EM1fwBIT7o0/exec";
-// Automatically appends the token to all incoming/outgoing network requests
 const BACKEND_API_URL = `${BASE_URL}?token=${apiKey}`;
 
-// Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
@@ -176,7 +173,6 @@ function syncForce() {
 
 function setSyncStatus(status) {
     const ind = document.getElementById('sync-indicator');
-    if (!ind) return;
     ind.innerText = status;
     if (status === 'Synced') {
         ind.className = "text-xxs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold uppercase tracking-wider";
@@ -337,27 +333,22 @@ const lblUnit = document.getElementById('lbl-unit');
 function initDashboardDropdowns() {
     alphabetizeCatalogItems();
     
-    if (mainCat) {
-        mainCat.innerHTML = '';
-        const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-        sortedCategories.forEach(c => mainCat.innerHTML += `<option value="${c}">${c}</option>`);
-        mainCat.innerHTML += `<option value="__NEW_CAT__">+ Add New Category...</option>`;
-    }
+    mainCat.innerHTML = '';
+    const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    sortedCategories.forEach(c => mainCat.innerHTML += `<option value="${c}">${c}</option>`);
+    mainCat.innerHTML += `<option value="__NEW_CAT__">+ Add New Category...</option>`;
     
-    if (mainUnit) {
-        mainUnit.innerHTML = '';
-        db.units.forEach(u => mainUnit.innerHTML += `<option value="${u}">${u}</option>`);
-        mainUnit.innerHTML += `<option value="__NEW_UNIT__">+ Add New...</option>`;
-    }
-    if (flyUnitInput) flyUnitInput.classList.add('hidden');
+    mainUnit.innerHTML = '';
+    db.units.forEach(u => mainUnit.innerHTML += `<option value="${u}">${u}</option>`);
+    mainUnit.innerHTML += `<option value="__NEW_UNIT__">+ Add New...</option>`;
+    flyUnitInput.classList.add('hidden');
     
     syncItemsDropdown();
 }
 
 function syncItemsDropdown() {
-    if (!mainCat || !mainItem) return;
     const cat = mainCat.value;
-    if (flyCatDiv) flyCatDiv.classList.toggle('hidden', cat !== '__NEW_CAT__');
+    flyCatDiv.classList.toggle('hidden', cat !== '__NEW_CAT__');
     
     mainItem.innerHTML = '<option value="">-- Select Item --</option>';
     if(db.items[cat]) {
@@ -365,27 +356,30 @@ function syncItemsDropdown() {
         sortedItems.forEach(i => mainItem.innerHTML += `<option value="${i}">${i}</option>`);
     }
     mainItem.innerHTML += `<option value="__NEW_ITEM__">+ Add New Item...</option>`;
-    if (flyItemDiv) flyItemDiv.classList.add('hidden');
+    flyItemDiv.classList.add('hidden');
 
     if(cat === "Utilities / Gas" || cat === "Society Maintenance") {
-        if (mainQty) { mainQty.disabled = true; mainQty.value = 1; }
-        if (mainUnit) { mainUnit.disabled = true; mainUnit.value = "Nos"; }
-        if (lblQty) lblQty.classList.add('opacity-40');
-        if (lblUnit) lblUnit.classList.add('opacity-40');
+        mainQty.disabled = true;
+        mainUnit.disabled = true;
+        mainQty.value = 1;
+        mainUnit.value = "Nos";
+        lblQty.classList.add('opacity-40');
+        lblUnit.classList.add('opacity-40');
     } else {
-        if (mainQty) { mainQty.disabled = false; mainQty.value = ""; }
-        if (mainUnit) { mainUnit.disabled = false; }
-        if (lblQty) lblQty.classList.remove('opacity-40');
-        if (lblUnit) lblUnit.classList.remove('opacity-40');
+        mainQty.disabled = false;
+        mainUnit.disabled = false;
+        mainQty.value = "";
+        lblQty.classList.remove('opacity-40');
+        lblUnit.classList.remove('opacity-40');
     }
 }
 
-if (mainCat) mainCat.addEventListener('change', syncItemsDropdown);
-if (mainItem) mainItem.addEventListener('change', () => {
-    if (flyItemDiv) flyItemDiv.classList.toggle('hidden', mainItem.value !== '__NEW_ITEM__');
+mainCat.addEventListener('change', syncItemsDropdown);
+mainItem.addEventListener('change', () => {
+    flyItemDiv.classList.toggle('hidden', mainItem.value !== '__NEW_ITEM__');
 });
-if (mainUnit) mainUnit.addEventListener('change', () => {
-    if (flyUnitInput) flyUnitInput.classList.toggle('hidden', mainUnit.value !== '__NEW_UNIT__');
+mainUnit.addEventListener('change', () => {
+    flyUnitInput.classList.toggle('hidden', mainUnit.value !== '__NEW_UNIT__');
 });
 
 document.getElementById('manual-form').addEventListener('submit', (e) => {
@@ -508,6 +502,9 @@ function quickLog(type, volumeMl = null) {
     saveInventory();
 }
 
+// ==========================================
+// 5. RESTOCK ALERTS & GENERAL LOGS
+// ==========================================
 function logAbsence() {
     const type = document.getElementById('absent-item').value;
     const reason = document.getElementById('absent-reason').value.trim() || "Not Delivered";
@@ -554,43 +551,37 @@ const repFilterType = document.getElementById('rep-filter-type');
 const repTargetSelect = document.getElementById('rep-target-select');
 
 function initReportsWorkspace() {
-    if (repFilterType) repFilterType.value = "all";
-    if (repTargetSelect) {
-        repTargetSelect.disabled = true;
-        repTargetSelect.innerHTML = "";
-    }
-    const outBox = document.getElementById('report-output-box');
-    if (outBox) outBox.classList.add('hidden');
+    repFilterType.value = "all";
+    repTargetSelect.disabled = true;
+    repTargetSelect.innerHTML = "";
+    document.getElementById('report-output-box').classList.add('hidden');
 }
 
-if (repFilterType) {
-    repFilterType.addEventListener('change', () => {
-        const val = repFilterType.value;
-        if (!repTargetSelect) return;
-        if (val === 'all') {
-            repTargetSelect.disabled = true;
-            repTargetSelect.innerHTML = "";
-        } else {
-            repTargetSelect.disabled = false;
-            repTargetSelect.innerHTML = "";
-            
-            if (val === 'category') {
-                const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-                sortedCategories.forEach(c => {
-                    repTargetSelect.innerHTML += `<option value="${c}">${c}</option>`;
-                });
-            } else if (val === 'item') {
-                const allItems = [];
-                Object.values(db.items).forEach(list => {
-                    list.forEach(i => { if(!allItems.includes(i)) allItems.push(i); });
-                });
-                allItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(item => {
-                    repTargetSelect.innerHTML += `<option value="${item}">${item}</option>`;
-                });
-            }
+repFilterType.addEventListener('change', () => {
+    const val = repFilterType.value;
+    if (val === 'all') {
+        repTargetSelect.disabled = true;
+        repTargetSelect.innerHTML = "";
+    } else {
+        repTargetSelect.disabled = false;
+        repTargetSelect.innerHTML = "";
+        
+        if (val === 'category') {
+            const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+            sortedCategories.forEach(c => {
+                repTargetSelect.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+        } else if (val === 'item') {
+            const allItems = [];
+            Object.values(db.items).forEach(list => {
+                list.forEach(i => { if(!allItems.includes(i)) allItems.push(i); });
+            });
+            allItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(item => {
+                repTargetSelect.innerHTML += `<option value="${item}">${item}</option>`;
+            });
         }
-    });
-}
+    }
+});
 
 document.getElementById('btn-generate-rep').addEventListener('click', () => {
     document.getElementById('vendor-bill-scope').disabled = true;
@@ -810,7 +801,6 @@ function exportInvoicePDF() {
 // ==========================================
 function renderAlerts() {
     const alertDiv = document.getElementById('stock-alerts');
-    if (!alertDiv) return;
     alertDiv.innerHTML = "";
     if (db.watchlist.length === 0) {
         alertDiv.innerHTML = `<p class="text-xxs text-slate-400 dark:text-slate-500 italic">No items selected for stock tracking inside Settings.</p>`;
@@ -890,81 +880,77 @@ function renderSettingsWorkspace() {
     alphabetizeCatalogItems();
     
     const rateBox = document.getElementById('rates-container');
-    if (rateBox) {
-        rateBox.innerHTML = '';
-        Object.keys(db.rates).forEach(rateKey => {
-            let label = rateKey === 'milkPerLitre' ? 'Milk / Litre' : rateKey === 'newspaperWeekday' ? 'Paper Weekday' : 'Paper Weekend';
-            let html = `<div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
-                <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-700 dark:text-slate-300">${label}</span>
-                <button onclick="addRateRule('${rateKey}')" class="text-xxs font-bold text-blue-600 dark:text-blue-400 hover:underline">+ Add Rate</button></div>
-                <div class="space-y-1">`;
-                
-            db.rates[rateKey].forEach((r, idx) => {
-                html += `<div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg">
-                    <span class="dark:text-slate-300">From: <strong>${r.dateFrom}</strong> ➔ <strong>₹${r.val}</strong></span>
-                    <button onclick="deleteRateRule('${rateKey}', ${idx})" class="text-red-500 font-bold px-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded">✕</button>
-                </div>`;
-            });
-            html += `</div></div>`;
-            rateBox.innerHTML += html;
+    rateBox.innerHTML = '';
+    
+    Object.keys(db.rates).forEach(rateKey => {
+        let label = rateKey === 'milkPerLitre' ? 'Milk / Litre' : rateKey === 'newspaperWeekday' ? 'Paper Weekday' : 'Paper Weekend';
+        let html = `<div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+            <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-700 dark:text-slate-300">${label}</span>
+            <button onclick="addRateRule('${rateKey}')" class="text-xxs font-bold text-blue-600 dark:text-blue-400 hover:underline">+ Add Rate</button></div>
+            <div class="space-y-1">`;
+            
+        db.rates[rateKey].forEach((r, idx) => {
+            html += `<div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg">
+                <span class="dark:text-slate-300">From: <strong>${r.dateFrom}</strong> ➔ <strong>₹${r.val}</strong></span>
+                <button onclick="deleteRateRule('${rateKey}', ${idx})" class="text-red-500 font-bold px-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded">✕</button>
+            </div>`;
         });
-    }
+        html += `</div></div>`;
+        rateBox.innerHTML += html;
+    });
 
     const wlBox = document.getElementById('watchlist-container');
-    if (wlBox) {
-        wlBox.innerHTML = '';
-        const allUniqueItems = [];
-        Object.values(db.items).forEach(list => {
-            list.forEach(i => {
-                if(!allUniqueItems.includes(i) && i.toLowerCase() !== 'milk' && i.toLowerCase() !== 'newspaper') {
-                    allUniqueItems.push(i);
-                }
-            });
+    wlBox.innerHTML = '';
+    const allUniqueItems = [];
+    Object.values(db.items).forEach(list => {
+        list.forEach(i => {
+            if(!allUniqueItems.includes(i) && i.toLowerCase() !== 'milk' && i.toLowerCase() !== 'newspaper') {
+                allUniqueItems.push(i);
+            }
         });
+    });
 
-        allUniqueItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(itemName => {
-            const checked = db.watchlist.includes(itemName) ? 'checked' : '';
-            wlBox.innerHTML += `
-                <label class="flex items-center gap-1.5 text-xxs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                    <input type="checkbox" ${checked} onchange="toggleWatchlist('${itemName}')" class="rounded border-slate-300 dark:border-slate-600 text-blue-600">
-                    <span class="truncate">${itemName}</span>
-                </label>`;
-        });
-        if(allUniqueItems.length === 0) {
-            wlBox.innerHTML = `<p class="text-xxs italic text-slate-400 dark:text-slate-500">Add catalog items first</p>`;
-        }
+    allUniqueItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(itemName => {
+        const checked = db.watchlist.includes(itemName) ? 'checked' : '';
+        wlBox.innerHTML += `
+            <label class="flex items-center gap-1.5 text-xxs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                <input type="checkbox" ${checked} onchange="toggleWatchlist('${itemName}')" class="rounded border-slate-300 dark:border-slate-600 text-blue-600">
+                <span class="truncate">${itemName}</span>
+            </label>`;
+    });
+    if(allUniqueItems.length === 0) {
+        wlBox.innerHTML = `<p class="text-xxs italic text-slate-400 dark:text-slate-500">Add catalog items first</p>`;
     }
 
     const catalogBox = document.getElementById('catalog-container');
-    if (catalogBox) {
-        catalogBox.innerHTML = '';
-        const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    catalogBox.innerHTML = '';
+    
+    const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    
+    sortedCategories.forEach(cat => {
+        let itemsHtml = (db.items[cat] || []).map((item, idx) => `
+            <div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                <span class="truncate pr-1 dark:text-slate-300">${item}</span>
+                <button onclick="deleteCatalogItem('${cat}', ${idx})" class="text-slate-400 dark:text-slate-500 hover:text-red-500">✕</button>
+            </div>
+        `).join('');
         
-        sortedCategories.forEach(cat => {
-            let itemsHtml = (db.items[cat] || []).map((item, idx) => `
-                <div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
-                    <span class="truncate pr-1 dark:text-slate-300">${item}</span>
-                    <button onclick="deleteCatalogItem('${cat}', ${idx})" class="text-slate-400 dark:text-slate-500 hover:text-red-500">✕</button>
-                </div>
-            `).join('');
-            
-            catalogBox.innerHTML += `
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2 flex flex-col justify-between shadow-3xs dark:shadow-none">
-                    <div>
-                        <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1 mb-1.5">
-                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-1">${cat}</span>
-                            <button onclick="deleteCategory('${cat}')" class="text-xxs text-red-500 font-medium shrink-0 hover:underline">Delete</button>
-                        </div>
-                        <div class="space-y-1.5 max-h-24 overflow-y-auto no-scrollbar">${itemsHtml || '<p class="text-xxs italic text-slate-300 dark:text-slate-600">Empty</p>'}</div>
+        catalogBox.innerHTML += `
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2 flex flex-col justify-between shadow-3xs dark:shadow-none">
+                <div>
+                    <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1 mb-1.5">
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-1">${cat}</span>
+                        <button onclick="deleteCategory('${cat}')" class="text-xxs text-red-500 font-medium shrink-0 hover:underline">Delete</button>
                     </div>
-                    <div class="flex gap-1 pt-2 mt-auto border-t border-slate-50 dark:border-slate-700">
-                        <input type="text" id="add-item-to-${cat.replace(/\s+/g, '')}" placeholder="Add..." class="w-2/3 text-xxs border dark:border-slate-600 dark:bg-slate-900 p-1 rounded-lg text-slate-800 dark:text-slate-100">
-                        <button onclick="addCatalogItem('${cat}')" class="w-1/3 bg-slate-900 text-white dark:bg-slate-700 dark:text-slate-100 text-xxs rounded-lg font-bold">+</button>
-                    </div>
+                    <div class="space-y-1.5 max-h-24 overflow-y-auto no-scrollbar">${itemsHtml || '<p class="text-xxs italic text-slate-300 dark:text-slate-600">Empty</p>'}</div>
                 </div>
-            `;
-        });
-    }
+                <div class="flex gap-1 pt-2 mt-auto border-t border-slate-50 dark:border-slate-700">
+                    <input type="text" id="add-item-to-${cat.replace(/\s+/g, '')}" placeholder="Add..." class="w-2/3 text-xxs border dark:border-slate-600 dark:bg-slate-900 p-1 rounded-lg text-slate-800 dark:text-slate-100">
+                    <button onclick="addCatalogItem('${cat}')" class="w-1/3 bg-slate-900 text-white dark:bg-slate-700 dark:text-slate-100 text-xxs rounded-lg font-bold">+</button>
+                </div>
+            </div>
+        `;
+    });
 }
 
 function toggleWatchlist(itemName) {
@@ -1005,9 +991,7 @@ function deleteCategory(cat) {
 }
 function addCatalogItem(cat) {
     const inputId = `add-item-to-${cat.replace(/\s+/g, '')}`;
-    const el = document.getElementById(inputId);
-    if (!el) return;
-    const val = el.value.trim();
+    const val = document.getElementById(inputId).value.trim();
     if(!val) return;
     if(!db.items[cat]) db.items[cat] = [];
     db.items[cat].push(val);
@@ -1023,21 +1007,17 @@ function deleteCatalogItem(cat, idx) {
     }
 }
 
-const addCatForm = document.getElementById('form-add-cat-settings');
-if (addCatForm) {
-    addCatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = document.getElementById('new-cat-settings-name');
-        if (!input) return;
-        const newCat = input.value.trim();
-        if(newCat && !db.categories.includes(newCat)) {
-            db.categories.push(newCat);
-            db.items[newCat] = [];
-            saveConfig(); renderSettingsWorkspace();
-            input.value = '';
-        }
-    });
-}
+document.getElementById('form-add-cat-settings').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('new-cat-settings-name');
+    const newCat = input.value.trim();
+    if(newCat && !db.categories.includes(newCat)) {
+        db.categories.push(newCat);
+        db.items[newCat] = [];
+        saveConfig(); renderSettingsWorkspace();
+        input.value = '';
+    }
+});
 
 // ==========================================
 // 9. DARK MODE CONTROLLER
@@ -1053,7 +1033,6 @@ function updateThemeUIButton(isDark) {
     if(btn) btn.innerText = isDark ? "☀️ Light" : "🌙 Dark";
 }
 
-// Initial pull and application configurations setup on mount
 window.onload = () => { 
     const savedTheme = localStorage.getItem('gk_theme');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1065,13 +1044,6 @@ window.onload = () => {
         document.documentElement.classList.remove('dark');
     }
     updateThemeUIButton(activeDark);
-
-    // Default current dates inside inputs on initialization
-    const todayISO = new Date().toISOString().split('T')[0];
-    ['quick-log-date', 'main-date', 'rep-start', 'rep-end'].forEach(id => {
-        const input = document.getElementById(id);
-        if(input) input.value = todayISO;
-    });
 
     pullDatabaseFromSheet();
     initDashboardDropdowns(); 

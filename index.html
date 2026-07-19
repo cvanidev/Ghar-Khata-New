@@ -11,7 +11,14 @@
     <link class="rounded-xl" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3775/3775211.png">
     <link rel="shortcut icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3775/3775211.png">
     
+    <!-- Tailwind CSS v4 Browser Compiler -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Configures Tailwind v4 to listen for the manual HTML .dark class selector -->
+    <style type="text/tailwindcss">
+        @custom-variant dark (&:where(.dark, .dark *));
+    </style>
+
     <style> 
         .text-xxs { font-size: 0.68rem; } 
         .no-scrollbar::-webkit-scrollbar { display: none; }
