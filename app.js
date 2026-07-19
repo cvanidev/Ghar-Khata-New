@@ -15,22 +15,16 @@ const BASE_URL = "https://script.google.com/macros/s/AKfycbzONERqJZJknMPc1E7qfNK
 const BACKEND_API_URL = `${BASE_URL}?token=${apiKey}`;
 
 // Register Service Worker for Mobile PWA
-
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
             .then(reg => {
                 console.log('Service Worker Registered Successfully');
-
-                // Check for updates manually on load
                 reg.update();
-
-                // Listen for an update waiting to be installed
                 reg.addEventListener('updatefound', () => {
                     const newWorker = reg.installing;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // A new service worker is waiting. Force it to skip waiting.
                             newWorker.postMessage('SKIP_WAITING');
                         }
                     });
@@ -39,7 +33,6 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.error('Service Worker Registration Failed', err));
     });
 
-    // Automatically reload the page once the new Service Worker activates and takes control
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
@@ -72,7 +65,6 @@ const DEFAULT_SYSTEM = {
 let db = JSON.parse(localStorage.getItem('gk_v7_config')) || DEFAULT_SYSTEM;
 let inventory = JSON.parse(localStorage.getItem('gk_v7_inventory')) || [];
 
-// Helper function to sort item catalog lists alphabetically
 function alphabetizeCatalogItems() {
     if (db.items) {
         Object.keys(db.items).forEach(cat => {
@@ -89,17 +81,15 @@ function saveConfig() {
     if (typeof renderSettingsWorkspace === 'function') {
         renderSettingsWorkspace();
     }
-    triggerCloudPush(); // Pushes category rules to the cloud immediately!
+    triggerCloudPush();
 }
 
-// Write-Sync to Google Sheets
 function saveInventory() {
     localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
     triggerCloudPush();
-    renderDashboardLedger(); // Instantly update home view
+    renderDashboardLedger();
 }
 
-// Push local data array to Google Sheets Web App
 function triggerCloudPush() {
     if (!navigator.onLine || BACKEND_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT")) {
         setSyncStatus('Local Only');
@@ -107,11 +97,7 @@ function triggerCloudPush() {
     }
     setSyncStatus('Syncing...');
     
-    // Bundle database settings and active transactions together
-    const payload = {
-        config: db,
-        inventory: inventory
-    };
+    const payload = { config: db, inventory: inventory };
     
     fetch(BACKEND_API_URL, {
         method: 'POST',
@@ -129,7 +115,6 @@ function triggerCloudPush() {
     });
 }
 
-// Pull latest changes down from Sheets
 function pullDatabaseFromSheet() {
     if (!navigator.onLine || BACKEND_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT")) {
         setSyncStatus('Local Only');
@@ -142,8 +127,6 @@ function pullDatabaseFromSheet() {
     .then(res => res.json())
     .then(data => {
         if (data && !data.error) {
-            
-            // Check if the server is returning the new packaged layout
             if (data.config && data.inventory) {
                 db = data.config;
                 inventory = data.inventory.map(row => {
@@ -156,7 +139,6 @@ function pullDatabaseFromSheet() {
                 localStorage.setItem('gk_v7_config', JSON.stringify(db));
                 localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
             } else {
-                // Fallback for legacy raw lists structures
                 const rawArr = Array.isArray(data) ? data : (data.inventory || []);
                 inventory = rawArr.map(row => {
                     const sanitizedRow = {};
@@ -167,8 +149,6 @@ function pullDatabaseFromSheet() {
             }
 
             setSyncStatus('Synced');
-            
-            // Reinitialize inputs options drop-downs & charts views
             initDashboardDropdowns();
             renderDashboardLedger();
             
@@ -198,11 +178,11 @@ function setSyncStatus(status) {
     const ind = document.getElementById('sync-indicator');
     ind.innerText = status;
     if (status === 'Synced') {
-        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold uppercase tracking-wider";
+        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold uppercase tracking-wider";
     } else if (status === 'Syncing...') {
-        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold uppercase tracking-wider animate-pulse";
+        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400 font-bold uppercase tracking-wider animate-pulse";
     } else {
-        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold uppercase tracking-wider";
+        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400 font-bold uppercase tracking-wider";
     }
 }
 
@@ -232,32 +212,29 @@ function isDuplicateEntry(itemName, targetDateISOString) {
     });
 }
 
-// Renders the 5 most recent activities on Dashboard (Clean Production Version)
 function renderDashboardLedger() {
     const container = document.getElementById('dashboard-recent-log');
     if (!container) return;
 
     if (!inventory || inventory.length === 0) {
-        container.innerHTML = `<p class="text-xxs text-slate-400 italic py-2">No transaction entries. Add your first record above!</p>`;
+        container.innerHTML = `<p class="text-xxs text-slate-400 dark:text-slate-500 italic py-2">No transaction entries. Add your first record above!</p>`;
         return;
     }
 
-    // Sort descending by date
     const sorted = [...inventory].filter(entry => {
-        // Exclude header row if the script accidentally sent it
         if (Array.isArray(entry)) {
             return entry[0] !== 'ID' && entry[0] !== 'id';
         }
         return true;
     }).sort((a, b) => {
         const getRawDate = (x) => {
-            if (Array.isArray(x)) return x[1]; // Column B
+            if (Array.isArray(x)) return x[1];
             return x.date || x.timestamp || x.Date || Date.now();
         };
         return new Date(getRawDate(b)) - new Date(getRawDate(a));
     }).slice(0, 5);
     
-    let html = ""; // Clean start without debug banner
+    let html = "";
     sorted.forEach(entry => {
         let nameVal = "Unknown Item";
         let dateDisplay = "No Date";
@@ -267,7 +244,6 @@ function renderDashboardLedger() {
         let isAbsent = false;
         let commentVal = "";
 
-        // FORMAT A: Raw Array Mapping
         if (Array.isArray(entry)) {
             const rawDate = entry[1];
             if (rawDate) {
@@ -285,10 +261,8 @@ function renderDashboardLedger() {
             isAbsent = String(entry[7]).toLowerCase() === 'absent';
             commentVal = entry[8] || "";
         } 
-        // FORMAT B: Object Key Mapping
         else if (typeof entry === 'object' && entry !== null) {
             nameVal = entry.name || entry.item || entry.itemName || entry.Item || "Unknown Item";
-            
             const rawDate = entry.date || entry.timestamp || entry.Date;
             if (rawDate) {
                 const parsedDate = new Date(rawDate);
@@ -296,13 +270,10 @@ function renderDashboardLedger() {
                     dateDisplay = parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                 }
             }
-            
             qtyVal = entry.qty !== undefined ? entry.qty : (entry.quantity || entry.Qty || 0);
             unitVal = entry.unit || entry.Unit || "";
-            
             const rawAmt = entry.amount !== undefined ? entry.amount : (entry.total || entry.Amount || 0);
             amtVal = parseFloat(rawAmt) || 0;
-            
             isAbsent = String(entry.status || entry.Status || "").toLowerCase() === 'absent';
             commentVal = entry.comment || entry.Comment || "";
         }
@@ -310,12 +281,12 @@ function renderDashboardLedger() {
         const amtDisplay = isNaN(amtVal) ? "0.00" : amtVal.toFixed(2);
 
         html += `
-            <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 p-2 rounded-xl text-xxs">
+            <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 dark:bg-slate-800/50 dark:border-slate-700/60 p-2 rounded-xl text-xxs">
                 <div>
-                    <p class="font-bold text-slate-800">${nameVal} ${isAbsent ? '<span class="text-red-500 font-semibold">[Absent]</span>' : ''}</p>
-                    <p class="text-slate-400">${dateDisplay} | ${qtyVal} ${unitVal} ${commentVal ? `(${commentVal})` : ''}</p>
+                    <p class="font-bold text-slate-800 dark:text-slate-200">${nameVal} ${isAbsent ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-400 dark:text-slate-400">${dateDisplay} | ${qtyVal} ${unitVal} ${commentVal ? `(${commentVal})` : ''}</p>
                 </div>
-                <div class="text-right font-bold text-slate-700">
+                <div class="text-right font-bold text-slate-700 dark:text-slate-300">
                     <span>₹${amtDisplay}</span>
                 </div>
             </div>`;
@@ -331,17 +302,17 @@ function showScreen(screenId) {
     const tabMain = document.getElementById('tab-main');
     const tabReports = document.getElementById('tab-reports');
     
-    tabMain.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition text-slate-500 hover:text-slate-800";
-    tabReports.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition text-slate-500 hover:text-slate-800";
+    tabMain.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200";
+    tabReports.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200";
 
     document.getElementById(`screen-${screenId}`).classList.remove('hidden');
 
     if (screenId === 'dashboard') {
-        tabMain.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs";
+        tabMain.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs dark:bg-slate-800 dark:text-slate-100 dark:shadow-none";
         initDashboardDropdowns();
         renderDashboardLedger();
     } else if (screenId === 'reports') {
-        tabReports.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs";
+        tabReports.className = "flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs dark:bg-slate-800 dark:text-slate-100 dark:shadow-none";
         initReportsWorkspace();
         renderAlerts();
     } else if (screenId === 'settings') {
@@ -358,7 +329,6 @@ const mainUnit = document.getElementById('main-unit');
 const flyCatDiv = document.getElementById('fly-cat-div');
 const flyItemDiv = document.getElementById('fly-item-div');
 const flyUnitInput = document.getElementById('new-unit-fly');
-
 const mainQty = document.getElementById('main-qty');
 const lblQty = document.getElementById('lbl-qty');
 const lblUnit = document.getElementById('lbl-unit');
@@ -367,7 +337,6 @@ function initDashboardDropdowns() {
     alphabetizeCatalogItems();
     
     mainCat.innerHTML = '';
-    // Sort categories alphabetically
     const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     sortedCategories.forEach(c => mainCat.innerHTML += `<option value="${c}">${c}</option>`);
     mainCat.innerHTML += `<option value="__NEW_CAT__">+ Add New Category...</option>`;
@@ -386,7 +355,6 @@ function syncItemsDropdown() {
     
     mainItem.innerHTML = '<option value="">-- Select Item --</option>';
     if(db.items[cat]) {
-        // Ensure items list is explicitly sorted safely
         const sortedItems = [...db.items[cat]].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         sortedItems.forEach(i => mainItem.innerHTML += `<option value="${i}">${i}</option>`);
     }
@@ -420,7 +388,6 @@ mainUnit.addEventListener('change', () => {
 document.getElementById('manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
     
-    // 1. Resolve values from your index.html selectors
     let category = document.getElementById('main-cat').value;
     let name = document.getElementById('main-item').value;
     let unit = document.getElementById('main-unit').value;
@@ -440,21 +407,13 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     
     const dateInput = document.getElementById('main-date').value;
     const amtInput = document.getElementById('main-amt').value.trim();
-    
-    // Capture shared quantities and comments lines safely
     const qtyInput = mainQty ? mainQty.value.trim() : "";
     const commentInput = document.getElementById('main-comment');
     const finalComment = commentInput ? commentInput.value.trim() : "";
 
-    // 2. --- MANDATORY FORM FIELDS VALIDATION GATEKEEPER ---
     let validationErrors = [];
-
-    if (!name || name === "") {
-        validationErrors.push("• Please select or enter an Item Name.");
-    }
-    if (!dateInput || dateInput === "") {
-        validationErrors.push("• Date field cannot be left blank.");
-    }
+    if (!name || name === "") validationErrors.push("• Please select or enter an Item Name.");
+    if (!dateInput || dateInput === "") validationErrors.push("• Date field cannot be left blank.");
     if (amtInput === "" || isNaN(parseFloat(amtInput)) || parseFloat(amtInput) < 0) {
         validationErrors.push("• Please enter a valid numerical Amount (₹0 or more).");
     }
@@ -464,7 +423,6 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
         return;
     }
 
-    // 3. Save updates to dynamic configuration object arrays
     if (document.getElementById('main-cat').value === '__NEW_CAT__' && !db.categories.includes(category)) {
         db.categories.push(category);
         db.items[category] = [];
@@ -488,11 +446,9 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
 
     saveConfig();
     
-    // Quantity can naturally fall back to an empty string if omitted
     const finalQty = qtyInput === "" ? "" : parseFloat(qtyInput);
     const finalAmt = parseFloat(amtInput);
 
-    // 4. Construct payload row item
     const entry = {
         id: 'row_' + Date.now() + Math.random().toString(36).substr(2, 4),
         date: finalDate.toISOString(),
@@ -508,7 +464,6 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     inventory.push(entry);
     saveInventory();
     
-    // Reset forms and redraw drop menus panels
     e.target.reset();
     initDashboardDropdowns();
 });
@@ -654,13 +609,13 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     matched.forEach(i => {
         sum += parseFloat(i.amount);
         listHtml += `
-            <div class="flex justify-between items-center text-xxs py-2 border-b border-slate-100 group">
+            <div class="flex justify-between items-center text-xxs py-2 border-b border-slate-100 dark:border-slate-700/60 group">
                 <div>
-                    <p class="font-bold text-slate-800">${i.name} ${i.status === 'Absent' ? '<span class="text-red-500 font-semibold">[Absent]</span>' : ''}</p>
-                    <p class="text-slate-400">${new Date(i.date).toLocaleDateString('en-IN')} | ${i.qty} ${i.unit} ${i.comment ? `(${i.comment})` : ''}</p>
+                    <p class="font-bold text-slate-800 dark:text-slate-200">${i.name} ${i.status === 'Absent' ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-400 dark:text-slate-400">${new Date(i.date).toLocaleDateString('en-IN')} | ${i.qty} ${i.unit} ${i.comment ? `(${i.comment})` : ''}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="font-bold text-slate-700">₹${parseFloat(i.amount).toFixed(2)}</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">₹${parseFloat(i.amount).toFixed(2)}</span>
                     <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 hover:text-red-600 font-bold p-1">🗑️</button>
                 </div>
             </div>`;
@@ -669,12 +624,12 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     const outBox = document.getElementById('report-output-box');
     outBox.classList.remove('hidden');
     outBox.innerHTML = `
-        <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-2xs">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">Statement Entries</span>
-                <span class="text-xs font-black text-emerald-600">Total Spent: ₹${sum.toFixed(2)}</span>
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 space-y-3 shadow-2xs">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
+                <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Statement Entries</span>
+                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">Total Spent: ₹${sum.toFixed(2)}</span>
             </div>
-            <div class="max-h-60 overflow-y-auto pr-1 no-scrollbar space-y-1">${listHtml || '<p class="text-xxs italic text-slate-400">No transactions recorded.</p>'}</div>
+            <div class="max-h-60 overflow-y-auto pr-1 no-scrollbar space-y-1">${listHtml || '<p class="text-xxs italic text-slate-400 dark:text-slate-500">No transactions recorded.</p>'}</div>
         </div>`;
 });
 
@@ -710,11 +665,11 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
         if (i.name.toLowerCase() === 'milk' && (scope === 'both' || scope === 'milk')) {
             if (i.status === 'Absent') {
                 milkRowsHtml += `
-                    <tr class="text-red-600 bg-red-50/50">
-                        <td class="p-1.5 border-b">${cleanDateStr}</td>
-                        <td class="p-1.5 border-b text-center">0 L</td>
-                        <td class="p-1.5 border-b text-right">-</td>
-                        <td class="p-1.5 border-b text-right text-xxs italic">
+                    <tr class="text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
+                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr}</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-center">0 L</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-right">-</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-right text-xxs italic">
                             <div class="flex justify-between items-center">
                                 <span>${i.comment || 'Absent'}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 font-bold ml-1 no-print">🗑️</button>
@@ -727,14 +682,14 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                 const singleLitreRate = itemQty > 0 ? (itemAmount / itemQty) : 0;
                 totalMilkCost += itemAmount;
                 milkRowsHtml += `
-                    <tr>
-                        <td class="p-1.5 border-b">${cleanDateStr}</td>
-                        <td class="p-1.5 border-b text-center">${itemQty} L</td>
-                        <td class="p-1.5 border-b text-right">₹${singleLitreRate.toFixed(1)}</td>
-                        <td class="p-1.5 border-b text-right font-bold">
+                    <tr class="dark:text-slate-300">
+                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr}</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-center">${itemQty} L</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-right">₹${singleLitreRate.toFixed(1)}</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-right font-bold">
                             <div class="flex justify-between items-center justify-end gap-1">
                                 <span>₹${itemAmount.toFixed(0)}</span>
-                                <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
+                                <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 dark:text-slate-600 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
                             </div>
                         </td>
                     </tr>`;
@@ -745,10 +700,10 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
             const itemAmount = parseFloat(i.amount) || 0;
             if (i.status === 'Absent') {
                 paperRowsHtml += `
-                    <tr class="text-red-600 bg-red-50/50">
-                        <td class="p-1.5 border-b">${cleanDateStr} (${dayName})</td>
-                        <td class="p-1.5 border-b text-center">-</td>
-                        <td class="p-1.5 border-b text-right text-xxs italic">
+                    <tr class="text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
+                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr} (${dayName})</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-center">-</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-right text-xxs italic">
                             <div class="flex justify-between items-center justify-end">
                                 <span>${i.comment || 'Absent'}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 font-bold ml-1 no-print">🗑️</button>
@@ -758,13 +713,13 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
             } else {
                 totalPaperCost += itemAmount;
                 paperRowsHtml += `
-                    <tr>
-                        <td class="p-1.5 border-b">${cleanDateStr} (${dayName})</td>
-                        <td class="p-1.5 border-b text-center">₹${itemAmount.toFixed(0)}</td>
-                        <td class="p-1.5 border-b text-right font-bold">
+                    <tr class="dark:text-slate-300">
+                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr} (${dayName})</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-center">₹${itemAmount.toFixed(0)}</td>
+                        <td class="p-1.5 border-b dark:border-slate-700 text-right font-bold">
                             <div class="flex justify-between items-center justify-end gap-1">
                                 <span>₹${itemAmount.toFixed(0)}</span>
-                                <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
+                                <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 dark:text-slate-600 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
                             </div>
                         </td>
                     </tr>`;
@@ -775,35 +730,35 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
     let finalTablesBlock = "";
     if (scope === 'both' || scope === 'milk') {
         finalTablesBlock += `
-            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-                <h4 class="text-xs font-black text-slate-800 border-b pb-2 mb-2">🥛 Milk Delivery Invoice Details (Total: ₹${totalMilkCost.toFixed(0)})</h4>
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-2xs">
+                <h4 class="text-xs font-black text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 mb-2">🥛 Milk Delivery Invoice Details (Total: ₹${totalMilkCost.toFixed(0)})</h4>
                 <table class="w-full text-xxs text-left border-collapse">
                     <thead>
-                        <tr class="text-slate-400 border-b font-semibold bg-slate-50">
+                        <tr class="text-slate-400 dark:text-slate-500 border-b dark:border-slate-700 font-semibold bg-slate-50 dark:bg-slate-900/40">
                             <th class="p-1.5">Date</th>
                             <th class="p-1.5 text-center">Qty</th>
                             <th class="p-1.5 text-right">Rate/L</th>
                             <th class="p-1.5 text-right">Subtotal</th>
                         </tr>
                     </thead>
-                    <tbody class="font-medium">${milkRowsHtml || '<tr><td colspan="4" class="p-2 text-center italic text-slate-400">No entries inside parameters.</td></tr>'}</tbody>
+                    <tbody class="font-medium">${milkRowsHtml || '<tr><td colspan="4" class="p-2 text-center italic text-slate-400 dark:text-slate-500">No entries inside parameters.</td></tr>'}</tbody>
                 </table>
             </div>`;
     }
 
     if (scope === 'both' || scope === 'newspaper') {
         finalTablesBlock += `
-            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
-                <h4 class="text-xs font-black text-slate-800 border-b pb-2 mb-2">📰 Newspaper Supply Invoice Details (Total: ₹${totalPaperCost.toFixed(0)})</h4>
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-2xs">
+                <h4 class="text-xs font-black text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 mb-2">📰 Newspaper Supply Invoice Details (Total: ₹${totalPaperCost.toFixed(0)})</h4>
                 <table class="w-full text-xxs text-left border-collapse">
                     <thead>
-                        <tr class="text-slate-400 border-b font-semibold bg-slate-50">
+                        <tr class="text-slate-400 dark:text-slate-500 border-b dark:border-slate-700 font-semibold bg-slate-50 dark:bg-slate-900/40">
                             <th class="p-1.5">Date (Day)</th>
                             <th class="p-1.5 text-center">Price Rate</th>
                             <th class="p-1.5 text-right">Total</th>
                         </tr>
                     </thead>
-                    <tbody class="font-medium">${paperRowsHtml || '<tr><td colspan="3" class="p-2 text-center italic text-slate-400">No entries inside parameters.</td></tr>'}</tbody>
+                    <tbody class="font-medium">${paperRowsHtml || '<tr><td colspan="3" class="p-2 text-center italic text-slate-400 dark:text-slate-500">No entries inside parameters.</td></tr>'}</tbody>
                 </table>
             </div>`;
     }
@@ -821,19 +776,17 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                     📥 Download & Share Invoice
                 </button>
             </div>
-
-            <div class="space-y-4 bg-white p-1 rounded-xl">
-                <div class="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between items-end">
+            <div class="space-y-4 bg-white dark:bg-slate-800 p-1 rounded-xl">
+                <div class="border-b-2 border-slate-900 dark:border-slate-100 pb-2 mb-2 flex justify-between items-end">
                     <div>
-                        <h3 class="text-sm font-black tracking-tight uppercase text-slate-900">📄 Vendor Account Bill Summary</h3>
-                        <p class="text-xxs text-slate-500 font-medium">Period Statement: <strong>${cleanFrom}</strong> to <strong>${cleanTo}</strong></p>
+                        <h3 class="text-sm font-black tracking-tight uppercase text-slate-900 dark:text-slate-100">📄 Vendor Account Bill Summary</h3>
+                        <p class="text-xxs text-slate-500 dark:text-slate-400 font-medium">Period Statement: <strong>${cleanFrom}</strong> to <strong>${cleanTo}</strong></p>
                     </div>
                     <div class="text-right">
-                        <span class="text-xxs font-bold uppercase text-slate-400 block">Grand Settlement Due</span>
-                        <span class="text-sm font-black text-slate-900">₹${grandTotal.toFixed(0)}</span>
+                        <span class="text-xxs font-bold uppercase text-slate-400 dark:text-slate-500 block">Grand Settlement Due</span>
+                        <span class="text-sm font-black text-slate-900 dark:text-slate-100">₹${grandTotal.toFixed(0)}</span>
                     </div>
                 </div>
-
                 ${finalTablesBlock}
             </div>
         </div>`;
@@ -850,11 +803,10 @@ function renderAlerts() {
     const alertDiv = document.getElementById('stock-alerts');
     alertDiv.innerHTML = "";
     if (db.watchlist.length === 0) {
-        alertDiv.innerHTML = `<p class="text-xxs text-slate-400 italic">No items selected for stock tracking inside Settings.</p>`;
+        alertDiv.innerHTML = `<p class="text-xxs text-slate-400 dark:text-slate-500 italic">No items selected for stock tracking inside Settings.</p>`;
         return;
     }
 
-    // Group inventory entries by item name
     const historyMap = {};
     inventory.filter(i => i.status !== 'Absent').sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(i => {
         if(!historyMap[i.name]) historyMap[i.name] = [];
@@ -867,37 +819,27 @@ function renderAlerts() {
     let active = false;
     db.watchlist.forEach(name => {
         const entries = historyMap[name] || [];
-        if (entries.length < 3) return; // Need at least 3 points to determine a stable consumption pattern
+        if (entries.length < 3) return;
         
         let totalDaysSpan = (entries[entries.length - 1].date - entries[0].date) / (1000 * 60 * 60 * 24);
         if (totalDaysSpan <= 0) return;
 
-        // Check if any quantity values are missing in the item history chain
         const hasMissingQty = entries.some(e => e.qty === null || isNaN(e.qty) || e.qty === 0);
-        
         let daysToLast = 0;
         
         if (!hasMissingQty) {
-            // APPROACH A: QUANTITY + FREQUENCY AWARE
-            // Sum all quantities except the last one to see what was consumed over the total timeframe
             let totalConsumedQty = 0;
             for (let i = 0; i < entries.length - 1; i++) {
                 totalConsumedQty += entries[i].qty;
             }
-            
-            // Calculate daily burn rate
             const dailyBurnRate = totalConsumedQty / totalDaysSpan;
-            
             if (dailyBurnRate > 0) {
-                // How long will the most recently purchased quantity last?
                 const lastPurchasedQty = entries[entries.length - 1].qty;
                 daysToLast = Math.ceil(lastPurchasedQty / dailyBurnRate);
             } else {
-                // Fallback if burn rate computes to 0
                 daysToLast = 0;
             }
         } else {
-            // APPROACH B: PURE FREQUENCY FALLBACK (Original Logic)
             let diff = 0;
             for(let i = 1; i < entries.length; i++) {
                 diff += (entries[i].date - entries[i-1].date) / (1000 * 60 * 60 * 24);
@@ -906,17 +848,17 @@ function renderAlerts() {
             daysToLast = Math.ceil(averageCycle);
         }
         
-        // Calculate remaining days from today based on the last purchase timestamp
         const lastPurchaseDate = entries[entries.length - 1].date;
         const estimatedExhaustionDate = new Date(lastPurchaseDate.getTime() + (daysToLast * 24 * 60 * 60 * 1000));
         const rem = Math.ceil((estimatedExhaustionDate - new Date()) / (1000 * 60 * 60 * 24));
         
-        // Trigger alert banner if stock is running low (due in 5 days or less)
         if(rem <= 5) {
             active = true;
-            let theme = rem <= 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100';
+            let theme = rem <= 0 
+                ? 'bg-red-50 text-red-700 border-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50' 
+                : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/50';
             let label = rem <= 0 ? `Overdue / Empty by ${Math.abs(rem)} days!` : `due in ${rem} days`;
-            let StrategyTag = !hasMissingQty ? '📊' : '⏱️'; // Visual hint for math mode vs time mode
+            let StrategyTag = !hasMissingQty ? '📊' : '⏱️';
             
             alertDiv.innerHTML += `
                 <div class="flex justify-between p-2 rounded-lg border text-xxs font-medium ${theme}">
@@ -927,7 +869,7 @@ function renderAlerts() {
     });
 
     if(!active) {
-        alertDiv.innerHTML = `<p class="text-xxs text-slate-400 italic">All watched pantry items are stable.</p>`;
+        alertDiv.innerHTML = `<p class="text-xxs text-slate-400 dark:text-slate-500 italic">All watched pantry items are stable.</p>`;
     }
 }
 
@@ -942,15 +884,15 @@ function renderSettingsWorkspace() {
     
     Object.keys(db.rates).forEach(rateKey => {
         let label = rateKey === 'milkPerLitre' ? 'Milk / Litre' : rateKey === 'newspaperWeekday' ? 'Paper Weekday' : 'Paper Weekend';
-        let html = `<div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-            <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-700">${label}</span>
-            <button onclick="addRateRule('${rateKey}')" class="text-xxs font-bold text-blue-600 hover:underline">+ Add Rate</button></div>
+        let html = `<div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+            <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-700 dark:text-slate-300">${label}</span>
+            <button onclick="addRateRule('${rateKey}')" class="text-xxs font-bold text-blue-600 dark:text-blue-400 hover:underline">+ Add Rate</button></div>
             <div class="space-y-1">`;
             
         db.rates[rateKey].forEach((r, idx) => {
-            html += `<div class="flex justify-between items-center text-xxs bg-slate-50 p-1.5 rounded-lg">
-                <span>From: <strong>${r.dateFrom}</strong> ➔ <strong>₹${r.val}</strong></span>
-                <button onclick="deleteRateRule('${rateKey}', ${idx})" class="text-red-500 font-bold px-1 hover:bg-red-50 rounded">✕</button>
+            html += `<div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg">
+                <span class="dark:text-slate-300">From: <strong>${r.dateFrom}</strong> ➔ <strong>₹${r.val}</strong></span>
+                <button onclick="deleteRateRule('${rateKey}', ${idx})" class="text-red-500 font-bold px-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded">✕</button>
             </div>`;
         });
         html += `</div></div>`;
@@ -971,42 +913,40 @@ function renderSettingsWorkspace() {
     allUniqueItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(itemName => {
         const checked = db.watchlist.includes(itemName) ? 'checked' : '';
         wlBox.innerHTML += `
-            <label class="flex items-center gap-1.5 text-xxs font-semibold text-slate-600 cursor-pointer">
-                <input type="checkbox" ${checked} onchange="toggleWatchlist('${itemName}')" class="rounded border-slate-300 text-blue-600">
+            <label class="flex items-center gap-1.5 text-xxs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                <input type="checkbox" ${checked} onchange="toggleWatchlist('${itemName}')" class="rounded border-slate-300 dark:border-slate-600 text-blue-600">
                 <span class="truncate">${itemName}</span>
             </label>`;
     });
     if(allUniqueItems.length === 0) {
-        wlBox.innerHTML = `<p class="text-xxs italic text-slate-400">Add catalog items first</p>`;
+        wlBox.innerHTML = `<p class="text-xxs italic text-slate-400 dark:text-slate-500">Add catalog items first</p>`;
     }
 
     const catalogBox = document.getElementById('catalog-container');
     catalogBox.innerHTML = '';
     
-    // Sort categories when displaying workspace cards
     const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     
     sortedCategories.forEach(cat => {
-        // Items are already alphabetized by alphabetizeCatalogItems() up top
         let itemsHtml = (db.items[cat] || []).map((item, idx) => `
-            <div class="flex justify-between items-center text-xxs bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-                <span class="truncate pr-1">${item}</span>
-                <button onclick="deleteCatalogItem('${cat}', ${idx})" class="text-slate-400 hover:text-red-500 font-bold">✕</button>
+            <div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                <span class="truncate pr-1 dark:text-slate-300">${item}</span>
+                <button onclick="deleteCatalogItem('${cat}', ${idx})" class="text-slate-400 dark:text-slate-500 hover:text-red-500">✕</button>
             </div>
         `).join('');
         
         catalogBox.innerHTML += `
-            <div class="bg-white border border-slate-200 rounded-xl p-3 space-y-2 flex flex-col justify-between shadow-3xs">
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2 flex flex-col justify-between shadow-3xs dark:shadow-none">
                 <div>
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-1 mb-1.5">
-                        <span class="text-xs font-bold text-slate-800 truncate pr-1">${cat}</span>
+                    <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1 mb-1.5">
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-1">${cat}</span>
                         <button onclick="deleteCategory('${cat}')" class="text-xxs text-red-500 font-medium shrink-0 hover:underline">Delete</button>
                     </div>
-                    <div class="space-y-1.5 max-h-24 overflow-y-auto no-scrollbar">${itemsHtml || '<p class="text-xxs italic text-slate-300">Empty</p>'}</div>
+                    <div class="space-y-1.5 max-h-24 overflow-y-auto no-scrollbar">${itemsHtml || '<p class="text-xxs italic text-slate-300 dark:text-slate-600">Empty</p>'}</div>
                 </div>
-                <div class="flex gap-1 pt-2 mt-auto border-t border-slate-50">
-                    <input type="text" id="add-item-to-${cat.replace(/\s+/g, '')}" placeholder="Add..." class="w-2/3 text-xxs border p-1 rounded-lg">
-                    <button onclick="addCatalogItem('${cat}')" class="w-1/3 bg-slate-900 text-white text-xxs rounded-lg font-bold">+</button>
+                <div class="flex gap-1 pt-2 mt-auto border-t border-slate-50 dark:border-slate-700">
+                    <input type="text" id="add-item-to-${cat.replace(/\s+/g, '')}" placeholder="Add..." class="w-2/3 text-xxs border dark:border-slate-600 dark:bg-slate-900 p-1 rounded-lg text-slate-800 dark:text-slate-100">
+                    <button onclick="addCatalogItem('${cat}')" class="w-1/3 bg-slate-900 text-white dark:bg-slate-700 dark:text-slate-100 text-xxs rounded-lg font-bold">+</button>
                 </div>
             </div>
         `;
@@ -1036,7 +976,6 @@ function deleteRateRule(key, idx) {
         return;
     }
     const rule = db.rates[key][idx];
-    // Added safety confirmation alert before timeline history deletion
     if (confirm(`Delete the rate rule (Effective: ${rule.dateFrom}, Value: ₹${rule.val})?`)) {
         db.rates[key].splice(idx, 1);
         saveConfig(); 
@@ -1058,10 +997,8 @@ function addCatalogItem(cat) {
     db.items[cat].push(val);
     saveConfig(); renderSettingsWorkspace();
 }
-// Adjusted mapping reference update to reflect structural change cleanly
 function deleteCatalogItem(cat, idx) {
     const name = db.items[cat][idx];
-    // Added safety prompt warning check before item removal
     if (confirm(`Are you sure you want to delete "${name}" from the ${cat} catalog?`)) {
         db.watchlist = db.watchlist.filter(i => i !== name);
         db.items[cat].splice(idx, 1);
@@ -1082,8 +1019,33 @@ document.getElementById('form-add-cat-settings').addEventListener('submit', (e) 
     }
 });
 
-// Run Initial pull on page mount
+// ==========================================
+// 9. DARK MODE CONTROLLER
+// ==========================================
+function toggleDarkMode() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('gk_theme', isDark ? 'dark' : 'light');
+    updateThemeUIButton(isDark);
+}
+
+function updateThemeUIButton(isDark) {
+    const btn = document.getElementById('btn-toggle-dark');
+    if(btn) btn.innerText = isDark ? "☀️ Light" : "🌙 Dark";
+}
+
+// Initial pull and application configurations setup on mount
 window.onload = () => { 
+    const savedTheme = localStorage.getItem('gk_theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const activeDark = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
+    
+    if (activeDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    updateThemeUIButton(activeDark);
+
     pullDatabaseFromSheet();
     initDashboardDropdowns(); 
 };

@@ -18,170 +18,174 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         @media print {
-            body { background: white; color: black; padding: 0; margin: 0; }
-            main { border: none !important; box-shadow: none !important; max-width: 100%; width: 100%; padding: 0; margin: 0; }
+            body { background: white !important; color: black !important; padding: 0; margin: 0; }
+            main { border: none !important; box-shadow: none !important; max-width: 100%; width: 100%; padding: 0; margin: 0; background: white !important; }
             .no-print { display: none !important; }
             .print-container { border: none !important; box-shadow: none !important; padding: 0 !important; }
+            * { color: black !important; border-color: #cbd5e1 !important; background: transparent !important; }
         }
     </style>
 </head>
-<body class="bg-slate-100 p-2 sm:p-4 font-sans text-slate-800">
+<body class="bg-slate-100 dark:bg-slate-950 p-2 sm:p-4 font-sans text-slate-800 dark:text-slate-100 transition-colors duration-200">
 
-    <main class="max-w-md mx-auto bg-white rounded-2xl shadow-md border border-slate-200 p-4 sm:p-6 space-y-4">
+    <main class="max-w-md mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-4">
         
-        <div class="border-b border-slate-100 pb-3 no-print">
+        <div class="border-b border-slate-100 dark:border-slate-800/80 pb-3 no-print">
             <div class="flex justify-between items-center mb-3">
                 <div>
-                    <h1 class="text-xl font-black tracking-tight flex items-center gap-1.5">🏠 Ghar-Khata 
-                        <span id="sync-indicator" class="text-xxs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold uppercase tracking-wider animate-pulse">Offline-Mode</span>
+                    <h1 class="text-xl font-black tracking-tight flex items-center gap-1.5 text-slate-900 dark:text-slate-50">🏠 Ghar-Khata 
+                        <span id="sync-indicator" class="text-xxs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 font-bold uppercase tracking-wider animate-pulse">Offline-Mode</span>
                     </h1>
-                    <p class="text-xxs text-slate-400 font-bold uppercase">Ledger, Alerts & Auditing</p>
+                    <p class="text-xxs text-slate-400 dark:text-slate-500 font-bold uppercase">Ledger, Alerts & Auditing</p>
                 </div>
-                <button onclick="showScreen('settings')" class="bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-200 transition">⚙️ Settings</button>
+                <div class="flex items-center gap-1.5">
+                    <button id="btn-toggle-dark" onclick="toggleDarkMode()" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition">🌙 Dark</button>
+                    <button onclick="showScreen('settings')" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition">⚙️ Settings</button>
+                </div>
             </div>
             
-            <div class="flex bg-slate-100 p-1 rounded-xl gap-1">
-                <button id="tab-main" onclick="showScreen('dashboard')" class="flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs">Daily Entry</button>
-                <button id="tab-reports" onclick="showScreen('reports')" class="flex-1 text-center font-bold py-2 rounded-lg text-xs transition text-slate-500 hover:text-slate-800">📊 Reports & Alerts</button>
+            <div class="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl gap-1">
+                <button id="tab-main" onclick="showScreen('dashboard')" class="flex-1 text-center font-bold py-2 rounded-lg text-xs transition bg-white text-slate-800 shadow-3xs dark:bg-slate-800 dark:text-slate-100 dark:shadow-none">Daily Entry</button>
+                <button id="tab-reports" onclick="showScreen('reports')" class="flex-1 text-center font-bold py-2 rounded-lg text-xs transition text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200">📊 Reports & Alerts</button>
             </div>
         </div>
 
         <div id="screen-dashboard" class="space-y-4 no-print">
             
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3">
-                <div class="flex justify-between items-center border-b border-slate-200/60 pb-1.5">
-                    <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">⚡ Quick Log</h2>
-                    <input type="date" id="quick-log-date" class="text-xxs border bg-white px-2 py-0.5 rounded-md font-medium">
+            <div class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-200/60 dark:border-slate-800 pb-1.5">
+                    <h2 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">⚡ Quick Log</h2>
+                    <input type="date" id="quick-log-date" class="text-xxs border dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded-md font-medium">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1">
-                        <span class="block text-xxs font-bold text-slate-400 uppercase">Newspaper Log</span>
-                        <button onclick="quickLog('newspaper')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-1 rounded-xl text-xs transition">📰 Paper Entry</button>
+                        <span class="block text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase">Newspaper Log</span>
+                        <button onclick="quickLog('newspaper')" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-white font-medium py-2 px-1 rounded-xl text-xs transition">📰 Paper Entry</button>
                     </div>
                     <div class="space-y-1">
-                        <span class="block text-xxs font-bold text-slate-400 uppercase">Milk Log (Select Vol)</span>
-                        <div class="flex rounded-xl bg-blue-50 border border-blue-100 p-0.5 gap-1">
-                            <button onclick="quickLog('milk', 500)" class="flex-1 bg-white text-blue-900 font-bold text-xxs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 transition">500ml</button>
-                            <button onclick="quickLog('milk', 750)" class="flex-1 bg-white text-blue-900 font-bold text-xxs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 transition">750ml</button>
-                            <button onclick="quickLog('milk', 1000)" class="flex-1 bg-white text-blue-900 font-bold text-xxs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 transition">1L</button>
+                        <span class="block text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase">Milk Log (Select Vol)</span>
+                        <div class="flex rounded-xl bg-blue-50 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900 p-0.5 gap-1">
+                            <button onclick="quickLog('milk', 500)" class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xxs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 dark:hover:bg-slate-700/60 transition">500ml</button>
+                            <button onclick="quickLog('milk', 750)" class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xxs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 dark:hover:bg-slate-700/60 transition">750ml</button>
+                            <button onclick="quickLog('milk', 1000)" class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xxs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 dark:hover:bg-slate-700/60 transition">1L</button>
                         </div>
                     </div>
                 </div>
 
-                <div class="pt-2 border-t border-slate-200/60 flex flex-col gap-2">
-                    <span class="block text-xxs font-bold text-slate-400 uppercase">⚠️ Mark Delivery Absence</span>
+                <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex flex-col gap-2">
+                    <span class="block text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase">⚠️ Mark Delivery Absence</span>
                     <div class="grid grid-cols-3 gap-1.5">
-                        <select id="absent-item" class="rounded-lg border border-slate-200 p-1.5 text-xs bg-white font-medium">
+                        <select id="absent-item" class="rounded-lg border border-slate-200 dark:border-slate-700 p-1.5 text-xs bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-medium">
                             <option value="milk">🥛 No Milk</option>
                             <option value="newspaper">📰 No Paper</option>
                         </select>
-                        <input type="text" id="absent-reason" placeholder="Reason (e.g., Cancelled)" class="rounded-lg border border-slate-200 p-1.5 text-xs bg-white">
+                        <input type="text" id="absent-reason" placeholder="Reason (e.g., Cancelled)" class="rounded-lg border border-slate-200 dark:border-slate-700 p-1.5 text-xs bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
                         <button type="button" onclick="logAbsence()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 rounded-lg text-xs transition">Log Stop</button>
                     </div>
                 </div>
             </div>
 
             <form id="manual-form" class="space-y-3">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">📦 Record Purchase / Payment</h2>
+                <h2 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">📦 Record Purchase / Payment</h2>
                 
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-xxs font-semibold text-slate-500 mb-0.5">Category</label>
-                        <select id="main-cat" class="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50 font-medium focus:bg-white"></select>
+                        <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Category</label>
+                        <select id="main-cat" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-medium focus:bg-white dark:focus:bg-slate-900"></select>
                     </div>
                     <div>
-                        <label class="block text-xxs font-semibold text-slate-500 mb-0.5">Date</label>
-                        <input type="date" id="main-date" class="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50">
+                        <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Date</label>
+                        <input type="date" id="main-date" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
                     </div>
                 </div>
 
                 <div id="fly-cat-div" class="hidden">
-                    <label class="block text-xxs font-bold text-emerald-600 mb-0.5">Custom Category Title</label>
-                    <input type="text" id="new-cat-fly" placeholder="e.g., Organic Foods" class="w-full rounded-xl border border-emerald-300 p-2.5 text-xs bg-emerald-50/20">
+                    <label class="block text-xxs font-bold text-emerald-600 dark:text-emerald-400 mb-0.5">Custom Category Title</label>
+                    <input type="text" id="new-cat-fly" placeholder="e.g., Organic Foods" class="w-full rounded-xl border border-emerald-300 dark:border-emerald-800 p-2.5 text-xs bg-emerald-50/20 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-100">
                 </div>
 
                 <div>
-                    <label class="block text-xxs font-semibold text-slate-500 mb-0.5">Item Name</label>
-                    <select id="main-item" class="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50 font-medium focus:bg-white"></select>
+                    <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Item Name</label>
+                    <select id="main-item" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-medium focus:bg-white dark:focus:bg-slate-900"></select>
                 </div>
 
                 <div id="fly-item-div" class="hidden">
-                    <label class="block text-xxs font-bold text-emerald-600 mb-0.5">Custom Item Title</label>
-                    <input type="text" id="new-item-fly" placeholder="e.g., Desi Cow Ghee" class="w-full rounded-xl border border-emerald-300 p-2.5 text-xs bg-emerald-50/20">
+                    <label class="block text-xxs font-bold text-emerald-600 dark:text-emerald-400 mb-0.5">Custom Item Title</label>
+                    <input type="text" id="new-item-fly" placeholder="e.g., Desi Cow Ghee" class="w-full rounded-xl border border-emerald-300 dark:border-emerald-800 p-2.5 text-xs bg-emerald-50/20 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-100">
                 </div>
 
                 <div class="grid grid-cols-3 gap-2">
                     <div>
-                        <label id="lbl-qty" class="block text-xxs font-semibold text-slate-500 mb-0.5">Quantity</label>
-                        <input type="number" step="any" id="main-qty" placeholder="Qty" class="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50">
+                        <label id="lbl-qty" class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Quantity</label>
+                        <input type="number" step="any" id="main-qty" placeholder="Qty" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
                     </div>
                     <div>
-                        <label id="lbl-unit" class="block text-xxs font-semibold text-slate-500 mb-0.5">Unit</label>
-                        <select id="main-unit" class="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50"></select>
-                        <input type="text" id="new-unit-fly" placeholder="New Unit" class="hidden mt-1.5 w-full rounded-lg border border-emerald-300 p-1.5 text-xs bg-emerald-50/20">
+                        <label id="lbl-unit" class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Unit</label>
+                        <select id="main-unit" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100"></select>
+                        <input type="text" id="new-unit-fly" placeholder="New Unit" class="hidden mt-1.5 w-full rounded-lg border border-emerald-300 dark:border-emerald-800 p-1.5 text-xs bg-emerald-50/20 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-100">
                     </div>
                     <div>
-                        <label class="block text-xxs font-semibold text-slate-500 mb-0.5">Amount (₹)</label>
-                        <input type="number" id="main-amt" placeholder="₹ Amount" class="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50">
+                        <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Amount (₹)</label>
+                        <input type="number" id="main-amt" placeholder="₹ Amount" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
                     </div>
                 </div>
 
                 <div class="flex flex-col gap-1">
-                    <label for="main-comment" class="text-slate-500 text-xxs font-medium">Remarks / Comments (Optional)</label>
-                    <input type="text" id="main-comment" placeholder="e.g. Amul Slim n Trim, Extra paper, etc." class="bg-slate-50 border border-slate-200/80 rounded-xl p-2 text-xxs focus:outline-none focus:ring-1 focus:ring-slate-400" />
+                    <label for="main-comment" class="text-slate-500 dark:text-slate-400 text-xxs font-medium">Remarks / Comments (Optional)</label>
+                    <input type="text" id="main-comment" placeholder="e.g. Amul Slim n Trim, Extra paper, etc." class="bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-700 rounded-xl p-2 text-xxs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-400" />
                 </div>
                 
                 <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-xl font-bold text-xs transition shadow-xs">Save Entry Row</button>
             </form>
 
-            <div class="border-t border-slate-100 pt-3">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📋 Recent Synced Activity</h3>
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
+                <h3 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">📋 Recent Synced Activity</h3>
                 <div id="dashboard-recent-log" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 no-scrollbar">
-                    <p class="text-xxs text-slate-400 italic">Connecting to Google Sheets...</p>
+                    <p class="text-xxs text-slate-400 dark:text-slate-500 italic">Connecting to Google Sheets...</p>
                 </div>
             </div>
         </div>
 
         <div id="screen-reports" class="hidden space-y-4">
             
-            <div class="bg-amber-50/50 border border-amber-200 rounded-xl p-4 no-print">
-                <h3 class="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">⏱️ Watchlist Restock Alerts</h3>
+            <div class="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 no-print">
+                <h3 class="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider mb-2">⏱️ Watchlist Restock Alerts</h3>
                 <div id="stock-alerts" class="space-y-1.5"></div>
             </div>
 
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 no-print">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">📊 Dynamic Reports Engine</h3>
+            <div class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3 no-print">
+                <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">📊 Dynamic Reports Engine</h3>
                 
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-xxs font-semibold text-slate-500 mb-0.5">Filter Type</label>
-                        <select id="rep-filter-type" class="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white font-medium">
+                        <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Filter Type</label>
+                        <select id="rep-filter-type" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2 text-xs bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-medium">
                             <option value="all">Everything (All Categories)</option>
                             <option value="category">Specific Category</option>
                             <option value="item">Specific Item</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xxs font-semibold text-slate-500 mb-0.5">Selection</label>
-                        <select id="rep-target-select" disabled class="w-full rounded-xl border border-slate-200 p-2 text-xs bg-slate-100 font-medium"></select>
+                        <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Selection</label>
+                        <select id="rep-target-select" disabled class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2 text-xs bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-medium"></select>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-xxs font-semibold text-slate-500 mb-0.5">From Date</label>
-                        <input type="date" id="rep-start" class="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white">
+                        <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">From Date</label>
+                        <input type="date" id="rep-start" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2 text-xs bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
                     </div>
                     <div>
-                        <label class="block text-xxs font-semibold text-slate-500 mb-0.5">To Date</label>
-                        <input type="date" id="rep-end" class="w-full rounded-xl border border-slate-200 p-2 text-xs bg-white">
+                        <label class="block text-xxs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">To Date</label>
+                        <input type="date" id="rep-end" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-2 text-xs bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100">
                     </div>
                 </div>
 
-                <div class="pt-2 border-t border-slate-200/60">
-                    <label class="block text-xxs font-bold text-blue-700 uppercase tracking-wide mb-1">📋 Vendor Statement Scope</label>
-                    <select id="vendor-bill-scope" class="w-full rounded-xl border border-slate-300 p-2 text-xs bg-blue-50/50 font-bold mb-2">
+                <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                    <label class="block text-xxs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide mb-1">📋 Vendor Statement Scope</label>
+                    <select id="vendor-bill-scope" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 p-2 text-xs bg-blue-50/50 dark:bg-blue-950/20 text-slate-800 dark:text-slate-100 font-bold mb-2">
                         <option value="both">Show Both (Milk & Newspaper)</option>
                         <option value="milk">🥛 Only Milk Vendor Statement</option>
                         <option value="newspaper">📰 Only Newspaper Vendor Statement</option>
@@ -189,7 +193,7 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
-                    <button type="button" id="btn-generate-rep" class="w-full bg-slate-900 hover:bg-slate-800 text-white p-2 rounded-xl font-bold text-xs transition">Run Statement</button>
+                    <button type="button" id="btn-generate-rep" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-white p-2 rounded-xl font-bold text-xs transition">Run Statement</button>
                     <button type="button" id="btn-generate-bill" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-xl font-bold text-xs transition">Generate Vendor Bill</button>
                 </div>
             </div>
@@ -199,31 +203,31 @@
 
         <div id="screen-settings" class="hidden space-y-4 no-print">
             <div>
-                <h2 class="text-sm font-black text-slate-800">⚙️ Settings Console</h2>
-                <p class="text-xxs text-slate-400">Audit price lines, manage active catalogs, and toggle alert targets.</p>
+                <h2 class="text-sm font-black text-slate-800 dark:text-slate-200">⚙️ Settings Console</h2>
+                <p class="text-xxs text-slate-400 dark:text-slate-500">Audit price lines, manage active catalogs, and toggle alert targets.</p>
                 
                 <div class="flex gap-2 mt-3">
-                    <button onclick="showScreen('dashboard')" class="bg-slate-900 text-white font-bold text-xxs px-3 py-1.5 rounded-lg">Back to Entry</button>
+                    <button onclick="showScreen('dashboard')" class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 font-bold text-xxs px-3 py-1.5 rounded-lg">Back to Entry</button>
                     <button onclick="syncForce()" class="bg-blue-600 text-white font-bold text-xxs px-3 py-1.5 rounded-lg hover:bg-blue-700">🔄 Pull Sync Now</button>
                 </div>
             </div>
 
             <div class="space-y-2">
-                <h3 class="text-xxs font-bold uppercase tracking-wider text-slate-400">📈 Price Change Log / Timelines</h3>
+                <h3 class="text-xxs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">📈 Price Change Log / Timelines</h3>
                 <div id="rates-container" class="grid grid-cols-1 gap-2"></div>
             </div>
 
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-                <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider">🔔 Stock Watchlist Settings</h3>
-                <div id="watchlist-container" class="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto bg-white p-2 rounded-lg border"></div>
+            <div class="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-2">
+                <h3 class="text-xs font-bold text-slate-600 dark:text-slate-400 tracking-wider">🔔 Stock Watchlist Settings</h3>
+                <div id="watchlist-container" class="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto bg-white dark:bg-slate-950 p-2 rounded-lg border dark:border-slate-800"></div>
             </div>
 
-            <div class="space-y-3 pt-3 border-t border-slate-100">
-                <h3 class="text-xxs font-bold uppercase tracking-wider text-slate-400">📂 Active Catalog Directories</h3>
+            <div class="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <h3 class="text-xxs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">📂 Active Catalog Directories</h3>
                 
-                <form id="form-add-cat-settings" class="flex gap-2 bg-slate-50 border border-slate-200 p-1.5 rounded-xl">
-                    <input type="text" id="new-cat-settings-name" placeholder="Create Category..." required class="flex-1 bg-white text-xs border rounded-lg px-2 py-1">
-                    <button type="submit" class="bg-slate-900 text-white text-xs px-3 py-1 rounded-lg font-semibold">Create</button>
+                <form id="form-add-cat-settings" class="flex gap-2 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 p-1.5 rounded-xl">
+                    <input type="text" id="new-cat-settings-name" placeholder="Create Category..." required class="flex-1 bg-white dark:bg-slate-950 text-xs border dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-2 py-1">
+                    <button type="submit" class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 text-xs px-3 py-1 rounded-lg font-semibold">Create</button>
                 </form>
                 
                 <div id="catalog-container" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1"></div>
