@@ -594,6 +594,7 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     const filter = repFilterType.value;
     const target = repTargetSelect.value;
 
+    // 1. Filter the inventory items based on date and selections
     const matched = inventory.filter(i => {
         const d = new Date(i.date).getTime();
         const dateMatch = (d >= start && d <= end);
@@ -602,7 +603,9 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
         if (filter === 'category') return (i.category || i.cat) === target;
         if (filter === 'item') return i.name === target;
         return true;
-    });
+    })
+    // 2. ADD THIS SORT METHOD BELOW TO SORT BY DATE (DESCENDING)
+    .sort((a, b) => new Date(b.date) - new Date(a.date)); 
 
     let sum = 0;
     let listHtml = "";
