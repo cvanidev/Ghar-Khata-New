@@ -12,6 +12,14 @@ if (!apiKey) {
 const BASE_URL = "https://script.google.com/macros/s/AKfycbzONERqJZJknMPc1E7qfNKeTTj0ZNii69yC88ydGxalbI0yFyRNVNg4EM1fwBIT7o0/exec";
 const BACKEND_API_URL = `${BASE_URL}?token=${apiKey}`;
 
+// Helper: Generates local date string (YYYY-MM-DD) avoiding UTC timezone shifts
+function getLocalDateString(d = new Date()) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
@@ -175,11 +183,11 @@ function setSyncStatus(status) {
     const ind = document.getElementById('sync-indicator');
     ind.innerText = status;
     if (status === 'Synced') {
-        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold uppercase tracking-wider";
+        ind.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold uppercase tracking-wider";
     } else if (status === 'Syncing...') {
-        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400 font-bold uppercase tracking-wider animate-pulse";
+        ind.className = "text-xs px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400 font-bold uppercase tracking-wider animate-pulse";
     } else {
-        ind.className = "text-xxs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400 font-bold uppercase tracking-wider";
+        ind.className = "text-xs px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400 font-bold uppercase tracking-wider";
     }
 }
 
@@ -202,9 +210,9 @@ function getEffectiveRate(rateTimeline, targetDateStr) {
 }
 
 function isDuplicateEntry(itemName, targetDateISOString) {
-    const checkDateStr = new Date(targetDateISOString).toISOString().split('T')[0];
+    const checkDateStr = getLocalDateString(new Date(targetDateISOString));
     return inventory.some(entry => {
-        const entryDateStr = new Date(entry.date).toISOString().split('T')[0];
+        const entryDateStr = getLocalDateString(new Date(entry.date));
         return entry.name.toLowerCase() === itemName.toLowerCase() && entryDateStr === checkDateStr;
     });
 }
@@ -214,7 +222,7 @@ function renderDashboardLedger() {
     if (!container) return;
 
     if (!inventory || inventory.length === 0) {
-        container.innerHTML = `<p class="text-xxs text-slate-400 dark:text-slate-500 italic py-2">No transaction entries. Add your first record above!</p>`;
+        container.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 italic py-2">No transaction entries. Add your first record above!</p>`;
         return;
     }
 
@@ -278,12 +286,12 @@ function renderDashboardLedger() {
         const amtDisplay = isNaN(amtVal) ? "0.00" : amtVal.toFixed(2);
 
         html += `
-            <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 dark:bg-slate-800/50 dark:border-slate-700/60 p-2 rounded-xl text-xxs">
+            <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 dark:bg-slate-800/50 dark:border-slate-700/60 p-2.5 rounded-xl text-xs">
                 <div>
-                    <p class="font-bold text-slate-800 dark:text-slate-200">${nameVal} ${isAbsent ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
-                    <p class="text-slate-400 dark:text-slate-400">${dateDisplay} | ${qtyVal} ${unitVal} ${commentVal ? `(${commentVal})` : ''}</p>
+                    <p class="font-bold text-sm text-slate-800 dark:text-slate-200">${nameVal} ${isAbsent ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-500 dark:text-slate-400 mt-0.5">${dateDisplay} | ${qtyVal} ${unitVal} ${commentVal ? `(${commentVal})` : ''}</p>
                 </div>
-                <div class="text-right font-bold text-slate-700 dark:text-slate-300">
+                <div class="text-right font-bold text-sm text-slate-700 dark:text-slate-300">
                     <span>₹${amtDisplay}</span>
                 </div>
             </div>`;
@@ -462,6 +470,7 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     saveInventory();
     
     e.target.reset();
+    document.getElementById('main-date').value = getLocalDateString();
     initDashboardDropdowns();
 });
 
@@ -470,7 +479,7 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
 // ==========================================
 function quickLog(type, volumeMl = null) {
     const dateInput = document.getElementById('quick-log-date').value;
-    const targetDateStr = dateInput ? new Date(dateInput).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    const targetDateStr = dateInput ? dateInput : getLocalDateString();
     const finalDate = new Date(targetDateStr);
     
     let name, category, qty, unit, cost;
@@ -509,7 +518,7 @@ function logAbsence() {
     const type = document.getElementById('absent-item').value;
     const reason = document.getElementById('absent-reason').value.trim() || "Not Delivered";
     const dateInput = document.getElementById('quick-log-date').value;
-    const targetDateStr = dateInput ? new Date(dateInput).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    const targetDateStr = dateInput ? dateInput : getLocalDateString();
     const finalDate = new Date(targetDateStr);
 
     let name = type === 'milk' ? "Milk" : "Newspaper";
@@ -594,7 +603,6 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     const filter = repFilterType.value;
     const target = repTargetSelect.value;
 
-    // 1. Filter the inventory items based on date and selections
     const matched = inventory.filter(i => {
         const d = new Date(i.date).getTime();
         const dateMatch = (d >= start && d <= end);
@@ -604,7 +612,6 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
         if (filter === 'item') return i.name === target;
         return true;
     })
-    // 2. ADD THIS SORT METHOD BELOW TO SORT BY DATE (DESCENDING)
     .sort((a, b) => new Date(b.date) - new Date(a.date)); 
 
     let sum = 0;
@@ -612,14 +619,14 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     matched.forEach(i => {
         sum += parseFloat(i.amount);
         listHtml += `
-            <div class="flex justify-between items-center text-xxs py-2 border-b border-slate-100 dark:border-slate-700/60 group">
+            <div class="flex justify-between items-center text-xs py-2.5 border-b border-slate-100 dark:border-slate-700/60 group">
                 <div>
-                    <p class="font-bold text-slate-800 dark:text-slate-200">${i.name} ${i.status === 'Absent' ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
-                    <p class="text-slate-400 dark:text-slate-400">${new Date(i.date).toLocaleDateString('en-IN')} | ${i.qty} ${i.unit} ${i.comment ? `(${i.comment})` : ''}</p>
+                    <p class="font-bold text-sm text-slate-800 dark:text-slate-200">${i.name} ${i.status === 'Absent' ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-500 dark:text-slate-400 mt-0.5">${new Date(i.date).toLocaleDateString('en-IN')} | ${i.qty} ${i.unit} ${i.comment ? `(${i.comment})` : ''}</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="font-bold text-slate-700 dark:text-slate-300">₹${parseFloat(i.amount).toFixed(2)}</span>
-                    <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 hover:text-red-600 font-bold p-1">🗑️</button>
+                <div class="flex items-center gap-2.5">
+                    <span class="font-bold text-sm text-slate-800 dark:text-slate-200">₹${parseFloat(i.amount).toFixed(2)}</span>
+                    <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 hover:text-red-600 font-bold p-1 text-sm">🗑️</button>
                 </div>
             </div>`;
     });
@@ -627,12 +634,12 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     const outBox = document.getElementById('report-output-box');
     outBox.classList.remove('hidden');
     outBox.innerHTML = `
-        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 space-y-3 shadow-2xs">
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 space-y-3 shadow-2xs rounded-xl">
             <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
                 <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Statement Entries</span>
-                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">Total Spent: ₹${sum.toFixed(2)}</span>
+                <span class="text-sm font-black text-emerald-600 dark:text-emerald-400">Total Spent: ₹${sum.toFixed(2)}</span>
             </div>
-            <div class="max-h-60 overflow-y-auto pr-1 no-scrollbar space-y-1">${listHtml || '<p class="text-xxs italic text-slate-400 dark:text-slate-500">No transactions recorded.</p>'}</div>
+            <div class="max-h-64 overflow-y-auto pr-1 no-scrollbar space-y-1">${listHtml || '<p class="text-xs italic text-slate-400 dark:text-slate-500 py-2">No transactions recorded.</p>'}</div>
         </div>`;
 });
 
@@ -668,11 +675,11 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
         if (i.name.toLowerCase() === 'milk' && (scope === 'both' || scope === 'milk')) {
             if (i.status === 'Absent') {
                 milkRowsHtml += `
-                    <tr class="text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
-                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr}</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-center">0 L</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-right">-</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-right text-xxs italic">
+                    <tr class="text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20 text-xs">
+                        <td class="p-2 border-b dark:border-slate-700">${cleanDateStr}</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-center">0 L</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-right">-</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-right text-xs italic">
                             <div class="flex justify-between items-center">
                                 <span>${i.comment || 'Absent'}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 font-bold ml-1 no-print">🗑️</button>
@@ -685,11 +692,11 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                 const singleLitreRate = itemQty > 0 ? (itemAmount / itemQty) : 0;
                 totalMilkCost += itemAmount;
                 milkRowsHtml += `
-                    <tr class="dark:text-slate-300">
-                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr}</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-center">${itemQty} L</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-right">₹${singleLitreRate.toFixed(1)}</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-right font-bold">
+                    <tr class="dark:text-slate-300 text-xs">
+                        <td class="p-2 border-b dark:border-slate-700">${cleanDateStr}</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-center">${itemQty} L</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-right">₹${singleLitreRate.toFixed(1)}</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-right font-bold">
                             <div class="flex justify-between items-center justify-end gap-1">
                                 <span>₹${itemAmount.toFixed(0)}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 dark:text-slate-600 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
@@ -703,10 +710,10 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
             const itemAmount = parseFloat(i.amount) || 0;
             if (i.status === 'Absent') {
                 paperRowsHtml += `
-                    <tr class="text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
-                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr} (${dayName})</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-center">-</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-right text-xxs italic">
+                    <tr class="text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20 text-xs">
+                        <td class="p-2 border-b dark:border-slate-700">${cleanDateStr} (${dayName})</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-center">-</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-right text-xs italic">
                             <div class="flex justify-between items-center justify-end">
                                 <span>${i.comment || 'Absent'}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-red-400 font-bold ml-1 no-print">🗑️</button>
@@ -716,10 +723,10 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
             } else {
                 totalPaperCost += itemAmount;
                 paperRowsHtml += `
-                    <tr class="dark:text-slate-300">
-                        <td class="p-1.5 border-b dark:border-slate-700">${cleanDateStr} (${dayName})</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-center">₹${itemAmount.toFixed(0)}</td>
-                        <td class="p-1.5 border-b dark:border-slate-700 text-right font-bold">
+                    <tr class="dark:text-slate-300 text-xs">
+                        <td class="p-2 border-b dark:border-slate-700">${cleanDateStr} (${dayName})</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-center">₹${itemAmount.toFixed(0)}</td>
+                        <td class="p-2 border-b dark:border-slate-700 text-right font-bold">
                             <div class="flex justify-between items-center justify-end gap-1">
                                 <span>₹${itemAmount.toFixed(0)}</span>
                                 <button onclick="deleteLedgerRow('${i.id}')" class="text-slate-300 dark:text-slate-600 hover:text-red-500 font-bold ml-1 no-print">🗑️</button>
@@ -735,13 +742,13 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
         finalTablesBlock += `
             <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-2xs">
                 <h4 class="text-xs font-black text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 mb-2">🥛 Milk Delivery Invoice Details (Total: ₹${totalMilkCost.toFixed(0)})</h4>
-                <table class="w-full text-xxs text-left border-collapse">
+                <table class="w-full text-xs text-left border-collapse">
                     <thead>
                         <tr class="text-slate-400 dark:text-slate-500 border-b dark:border-slate-700 font-semibold bg-slate-50 dark:bg-slate-900/40">
-                            <th class="p-1.5">Date</th>
-                            <th class="p-1.5 text-center">Qty</th>
-                            <th class="p-1.5 text-right">Rate/L</th>
-                            <th class="p-1.5 text-right">Subtotal</th>
+                            <th class="p-2">Date</th>
+                            <th class="p-2 text-center">Qty</th>
+                            <th class="p-2 text-right">Rate/L</th>
+                            <th class="p-2 text-right">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody class="font-medium">${milkRowsHtml || '<tr><td colspan="4" class="p-2 text-center italic text-slate-400 dark:text-slate-500">No entries inside parameters.</td></tr>'}</tbody>
@@ -753,12 +760,12 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
         finalTablesBlock += `
             <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-2xs">
                 <h4 class="text-xs font-black text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 mb-2">📰 Newspaper Supply Invoice Details (Total: ₹${totalPaperCost.toFixed(0)})</h4>
-                <table class="w-full text-xxs text-left border-collapse">
+                <table class="w-full text-xs text-left border-collapse">
                     <thead>
                         <tr class="text-slate-400 dark:text-slate-500 border-b dark:border-slate-700 font-semibold bg-slate-50 dark:bg-slate-900/40">
-                            <th class="p-1.5">Date (Day)</th>
-                            <th class="p-1.5 text-center">Price Rate</th>
-                            <th class="p-1.5 text-right">Total</th>
+                            <th class="p-2">Date (Day)</th>
+                            <th class="p-2 text-center">Price Rate</th>
+                            <th class="p-2 text-right">Total</th>
                         </tr>
                     </thead>
                     <tbody class="font-medium">${paperRowsHtml || '<tr><td colspan="3" class="p-2 text-center italic text-slate-400 dark:text-slate-500">No entries inside parameters.</td></tr>'}</tbody>
@@ -779,15 +786,15 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                     📥 Download & Share Invoice
                 </button>
             </div>
-            <div class="space-y-4 bg-white dark:bg-slate-800 p-1 rounded-xl">
+            <div class="space-y-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
                 <div class="border-b-2 border-slate-900 dark:border-slate-100 pb-2 mb-2 flex justify-between items-end">
                     <div>
                         <h3 class="text-sm font-black tracking-tight uppercase text-slate-900 dark:text-slate-100">📄 Vendor Account Bill Summary</h3>
-                        <p class="text-xxs text-slate-500 dark:text-slate-400 font-medium">Period Statement: <strong>${cleanFrom}</strong> to <strong>${cleanTo}</strong></p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Period Statement: <strong>${cleanFrom}</strong> to <strong>${cleanTo}</strong></p>
                     </div>
                     <div class="text-right">
-                        <span class="text-xxs font-bold uppercase text-slate-400 dark:text-slate-500 block">Grand Settlement Due</span>
-                        <span class="text-sm font-black text-slate-900 dark:text-slate-100">₹${grandTotal.toFixed(0)}</span>
+                        <span class="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 block">Grand Settlement Due</span>
+                        <span class="text-base font-black text-slate-900 dark:text-slate-100">₹${grandTotal.toFixed(0)}</span>
                     </div>
                 </div>
                 ${finalTablesBlock}
@@ -806,7 +813,7 @@ function renderAlerts() {
     const alertDiv = document.getElementById('stock-alerts');
     alertDiv.innerHTML = "";
     if (db.watchlist.length === 0) {
-        alertDiv.innerHTML = `<p class="text-xxs text-slate-400 dark:text-slate-500 italic">No items selected for stock tracking inside Settings.</p>`;
+        alertDiv.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 italic">No items selected for stock tracking inside Settings.</p>`;
         return;
     }
 
@@ -864,7 +871,7 @@ function renderAlerts() {
             let StrategyTag = !hasMissingQty ? '📊' : '⏱️';
             
             alertDiv.innerHTML += `
-                <div class="flex justify-between p-2 rounded-lg border text-xxs font-medium ${theme}">
+                <div class="flex justify-between p-2.5 rounded-lg border text-xs font-medium ${theme}">
                     <span>${StrategyTag} <strong>${name}</strong></span>
                     <span>${label}</span>
                 </div>`;
@@ -872,7 +879,7 @@ function renderAlerts() {
     });
 
     if(!active) {
-        alertDiv.innerHTML = `<p class="text-xxs text-slate-400 dark:text-slate-500 italic">All watched pantry items are stable.</p>`;
+        alertDiv.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 italic">All watched pantry items are stable.</p>`;
     }
 }
 
@@ -889,11 +896,11 @@ function renderSettingsWorkspace() {
         let label = rateKey === 'milkPerLitre' ? 'Milk / Litre' : rateKey === 'newspaperWeekday' ? 'Paper Weekday' : 'Paper Weekend';
         let html = `<div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
             <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-700 dark:text-slate-300">${label}</span>
-            <button onclick="addRateRule('${rateKey}')" class="text-xxs font-bold text-blue-600 dark:text-blue-400 hover:underline">+ Add Rate</button></div>
+            <button onclick="addRateRule('${rateKey}')" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">+ Add Rate</button></div>
             <div class="space-y-1">`;
             
         db.rates[rateKey].forEach((r, idx) => {
-            html += `<div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg">
+            html += `<div class="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-900/40 p-2 rounded-lg">
                 <span class="dark:text-slate-300">From: <strong>${r.dateFrom}</strong> ➔ <strong>₹${r.val}</strong></span>
                 <button onclick="deleteRateRule('${rateKey}', ${idx})" class="text-red-500 font-bold px-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded">✕</button>
             </div>`;
@@ -916,13 +923,13 @@ function renderSettingsWorkspace() {
     allUniqueItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(itemName => {
         const checked = db.watchlist.includes(itemName) ? 'checked' : '';
         wlBox.innerHTML += `
-            <label class="flex items-center gap-1.5 text-xxs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
                 <input type="checkbox" ${checked} onchange="toggleWatchlist('${itemName}')" class="rounded border-slate-300 dark:border-slate-600 text-blue-600">
                 <span class="truncate">${itemName}</span>
             </label>`;
     });
     if(allUniqueItems.length === 0) {
-        wlBox.innerHTML = `<p class="text-xxs italic text-slate-400 dark:text-slate-500">Add catalog items first</p>`;
+        wlBox.innerHTML = `<p class="text-xs italic text-slate-400 dark:text-slate-500">Add catalog items first</p>`;
     }
 
     const catalogBox = document.getElementById('catalog-container');
@@ -931,8 +938,9 @@ function renderSettingsWorkspace() {
     const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     
     sortedCategories.forEach(cat => {
+        const safeCatKey = cat.replace(/[^a-zA-Z0-9]/g, '');
         let itemsHtml = (db.items[cat] || []).map((item, idx) => `
-            <div class="flex justify-between items-center text-xxs bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-900/40 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                 <span class="truncate pr-1 dark:text-slate-300">${item}</span>
                 <button onclick="deleteCatalogItem('${cat}', ${idx})" class="text-slate-400 dark:text-slate-500 hover:text-red-500">✕</button>
             </div>
@@ -943,13 +951,13 @@ function renderSettingsWorkspace() {
                 <div>
                     <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1 mb-1.5">
                         <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-1">${cat}</span>
-                        <button onclick="deleteCategory('${cat}')" class="text-xxs text-red-500 font-medium shrink-0 hover:underline">Delete</button>
+                        <button onclick="deleteCategory('${cat}')" class="text-xs text-red-500 font-medium shrink-0 hover:underline">Delete</button>
                     </div>
-                    <div class="space-y-1.5 max-h-24 overflow-y-auto no-scrollbar">${itemsHtml || '<p class="text-xxs italic text-slate-300 dark:text-slate-600">Empty</p>'}</div>
+                    <div class="space-y-1.5 max-h-28 overflow-y-auto no-scrollbar">${itemsHtml || '<p class="text-xs italic text-slate-300 dark:text-slate-600">Empty</p>'}</div>
                 </div>
                 <div class="flex gap-1 pt-2 mt-auto border-t border-slate-50 dark:border-slate-700">
-                    <input type="text" id="add-item-to-${cat.replace(/\s+/g, '')}" placeholder="Add..." class="w-2/3 text-xxs border dark:border-slate-600 dark:bg-slate-900 p-1 rounded-lg text-slate-800 dark:text-slate-100">
-                    <button onclick="addCatalogItem('${cat}')" class="w-1/3 bg-slate-900 text-white dark:bg-slate-700 dark:text-slate-100 text-xxs rounded-lg font-bold">+</button>
+                    <input type="text" id="add-item-to-${safeCatKey}" placeholder="Add..." class="w-2/3 text-xs border dark:border-slate-600 dark:bg-slate-900 p-1.5 rounded-lg text-slate-800 dark:text-slate-100">
+                    <button onclick="addCatalogItem('${cat}')" class="w-1/3 bg-slate-900 text-white dark:bg-slate-700 dark:text-slate-100 text-xs rounded-lg font-bold">+</button>
                 </div>
             </div>
         `;
@@ -966,7 +974,7 @@ function toggleWatchlist(itemName) {
 }
 
 function addRateRule(key) {
-    const d = prompt("Enter Effective Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+    const d = prompt("Enter Effective Date (YYYY-MM-DD):", getLocalDateString());
     const v = prompt("Enter Rate Value (₹):");
     if(d && v) {
         db.rates[key].push({ dateFrom: d, val: parseFloat(v) });
@@ -993,7 +1001,8 @@ function deleteCategory(cat) {
     }
 }
 function addCatalogItem(cat) {
-    const inputId = `add-item-to-${cat.replace(/\s+/g, '')}`;
+    const safeCatKey = cat.replace(/[^a-zA-Z0-9]/g, '');
+    const inputId = `add-item-to-${safeCatKey}`;
     const val = document.getElementById(inputId).value.trim();
     if(!val) return;
     if(!db.items[cat]) db.items[cat] = [];
@@ -1047,6 +1056,11 @@ window.onload = () => {
         document.documentElement.classList.remove('dark');
     }
     updateThemeUIButton(activeDark);
+
+    // Initialize Default Dates to Today's Local Date
+    const today = getLocalDateString();
+    if(document.getElementById('main-date')) document.getElementById('main-date').value = today;
+    if(document.getElementById('quick-log-date')) document.getElementById('quick-log-date').value = today;
 
     pullDatabaseFromSheet();
     initDashboardDropdowns(); 
