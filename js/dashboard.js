@@ -10,6 +10,8 @@ const flyUnitInput = document.getElementById('new-unit-fly');
 const mainQty = document.getElementById('main-qty');
 const lblQty = document.getElementById('lbl-qty');
 const lblUnit = document.getElementById('lbl-unit');
+const mainContributor = document.getElementById('main-contributor');
+const mainShare = document.getElementById('main-share');
 
 function showScreen(screenId) {
     document.getElementById('screen-dashboard').classList.add('hidden');
@@ -81,6 +83,16 @@ function syncItemsDropdown() {
     }
 }
 
+function syncContributionControls() {
+    const isSelf = mainContributor.value === "self";
+
+    mainShare.disabled = isSelf;
+
+    if (isSelf) {
+        mainShare.value = "0";
+    }
+}
+
 function cancelEdit() {
     editingEntryId = null;
 
@@ -91,6 +103,10 @@ function cancelEdit() {
 
     document.getElementById('save-btn').textContent = "💾 Save Entry";
     document.getElementById('cancel-edit-btn').classList.add('hidden');
+
+    mainContributor.value = "self";
+    mainShare.value = "0";
+    syncContributionControls();
 }
 
 mainCat.addEventListener('change', syncItemsDropdown);
@@ -100,6 +116,7 @@ mainItem.addEventListener('change', () => {
 mainUnit.addEventListener('change', () => {
     flyUnitInput.classList.toggle('hidden', mainUnit.value !== '__NEW_UNIT__');
 });
+mainContributor.addEventListener('change', syncContributionControls);
 
 document.getElementById('manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -166,6 +183,9 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     const finalQty = qtyInput === "" ? "" : parseFloat(qtyInput);
     const finalAmt = parseFloat(amtInput);
 
+    const contributor = mainContributor.value;
+    const share = parseInt(mainShare.value, 10);
+
     if (editingEntryId) {
 
         const index = inventory.findIndex(i => i.id === editingEntryId);
@@ -178,7 +198,9 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
             qty: finalQty,
             unit,
             amount: finalAmt,
-            comment: finalComment
+            comment: finalComment,
+            contributor,
+            share
         };
 
         editingEntryId = null;
@@ -194,7 +216,9 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
             qty: finalQty,
             unit,
             amount: finalAmt,
-            comment: finalComment
+            comment: finalComment,
+            contributor,
+            share
         }));
 
     }
@@ -204,13 +228,13 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     editingEntryId = null;
 
     e.target.reset();
+    mainContributor.value = "self";
+    mainShare.value = "0";
+    syncContributionControls();
     initDashboardDropdowns();
     document.getElementById('main-date').value = getLocalDateString();
 });
 
-// ==========================================
-// 4. QUICK LOG ACTION DECK
-// ==========================================
 function quickLog(type, volumeMl = null) {
     const dateInput = document.getElementById('quick-log-date').value;
     const targetDateStr = dateInput ? dateInput : getLocalDateString();
@@ -378,6 +402,11 @@ function loadEntryForEdit(id) {
 
     document.getElementById('main-amt').value = entry.amount;
     document.getElementById('main-comment').value = entry.comment || "";
+
+    // Contribution
+    mainContributor.value = entry.contributor || "self";
+    syncContributionControls();
+    mainShare.value = String(entry.share ?? 0);
 
     document.getElementById('save-btn').textContent = "💾 Update Entry";
     document.getElementById('cancel-edit-btn').classList.remove('hidden');
