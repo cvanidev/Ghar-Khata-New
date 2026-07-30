@@ -84,12 +84,14 @@ function syncItemsDropdown() {
 }
 
 function syncContributionControls() {
-    const isSelf = mainContributor.value === "self";
+    const isSelf = mainContributor.value === "Self";
 
     mainShare.disabled = isSelf;
 
     if (isSelf) {
         mainShare.value = "0";
+    } else if (!["50", "100"].includes(mainShare.value)) {
+        mainShare.value = "50";
     }
 }
 
@@ -104,7 +106,7 @@ function cancelEdit() {
     document.getElementById('save-btn').textContent = "💾 Save Entry";
     document.getElementById('cancel-edit-btn').classList.add('hidden');
 
-    mainContributor.value = "self";
+    mainContributor.value = "Self";
     mainShare.value = "0";
     syncContributionControls();
 }
@@ -228,7 +230,7 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     editingEntryId = null;
 
     e.target.reset();
-    mainContributor.value = "self";
+    mainContributor.value = "Self";
     mainShare.value = "0";
     syncContributionControls();
     initDashboardDropdowns();
@@ -404,9 +406,9 @@ function loadEntryForEdit(id) {
     document.getElementById('main-comment').value = entry.comment || "";
 
     // Contribution
-    mainContributor.value = entry.contributor || "self";
-    syncContributionControls();
+    mainContributor.value = entry.contributor || "Self";
     mainShare.value = String(entry.share ?? 0);
+    syncContributionControls();
 
     document.getElementById('save-btn').textContent = "💾 Update Entry";
     document.getElementById('cancel-edit-btn').classList.remove('hidden');

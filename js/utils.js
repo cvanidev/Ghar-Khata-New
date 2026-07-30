@@ -31,7 +31,9 @@ function createEntry(data) {
         unit: data.unit || "",
         amount: Number(data.amount || 0),
         status: data.status || STATUS.DELIVERED,
-        comment: data.comment || ""
+        comment: data.comment || "",
+        contributor: data.contributor || "Self",
+        share: Number(data.share ?? 0)
     };
 }
 
