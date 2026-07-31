@@ -112,9 +112,6 @@ function deleteLedgerRow(rowId) {
     }
 }
 
-// ==========================================
-// 6. ISOLATED VENDOR STATEMENT SYSTEM (A5 Fit)
-// ==========================================
 document.getElementById('btn-generate-bill').addEventListener('click', () => {
     document.getElementById('vendor-bill-scope').disabled = false;
     const sDate = document.getElementById('rep-start').value;
@@ -260,6 +257,285 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
         </div>`;
 });
 
+document.getElementById("btn-generate-contribution")
+    .addEventListener("click", generateContributionStatement);
+
+function generateContributionStatement() {
+
+    const from = document.getElementById("contrib-from").value;
+    const to = document.getElementById("contrib-to").value;
+
+    if (!from || !to) {
+        alert("Please select both From and To dates.");
+        return;
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    toDate.setHours(23, 59, 59, 999);
+
+    const entries = inventory.filter(item => {
+
+        const d = new Date(item.date);
+
+        return (
+            d >= fromDate &&
+            d <= toDate &&
+            item.contributor === "Son"
+        );
+    });
+
+    if (entries.length === 0) {
+        document.getElementById("contribution-report").innerHTML = `
+            <p class="text-sm text-slate-500 italic">
+                No contribution found for selected period.
+            </p>`;
+        return;
+    }
+
+    // ======================================
+    // Group by Item + Contribution %
+    // ======================================
+
+    const summary = {};
+
+    let grandPurchase = 0;
+    let grandContribution = 0;
+
+    entries.forEach(item => {
+
+        const percent = Number(
+            item.contributionPercent ?? item.share ?? 0
+        );
+
+        // Milk-50, Milk-100 etc.
+        const key = `${item.name}-${percent}`;
+
+        const qty = Number(item.qty || 0);
+        const purchase = Number(item.amount || 0);
+        const contribution = purchase * percent / 100;
+
+        grandPurchase += purchase;
+        grandContribution += contribution;
+
+        if (!summary[key]) {
+
+            summary[key] = {
+
+                item: item.name,
+                share: percent,
+                qty: 0,
+                unit: item.unit || "",
+                purchase: 0,
+                contribution: 0
+
+            };
+
+        }
+
+        summary[key].qty += qty;
+        summary[key].purchase += purchase;
+        summary[key].contribution += contribution;
+
+    });
+
+    // ======================================
+    // Build Table
+    // ======================================
+
+    const today = new Date().toLocaleDateString('en-IN');
+
+    let html = `
+
+    <div class="mb-5 text-center">
+
+        <h2 class="text-xl font-bold">
+            GHAR KHATA
+        </h2>
+
+        <h3 class="text-lg font-semibold mt-1">
+            Son's Contribution Statement
+        </h3>
+
+        <div class="text-sm text-slate-500 mt-1">
+
+            Period :
+            ${formatDate(fromDate)}
+            to
+            ${formatDate(toDate)}
+
+        </div>
+
+        <div class="text-xs text-slate-400">
+
+            Generated on ${today}
+
+        </div>
+
+    </div>
+
+    <div class="overflow-x-auto">
+
+    <div class="grid grid-cols-2 gap-3 mb-4">
+
+        <div class="rounded-xl border p-3 bg-slate-50 dark:bg-slate-800">
+
+            <div class="text-xs text-slate-500">
+                Total Purchases
+            </div>
+
+            <div class="text-xl font-bold">
+                ₹${formatAmount(grandPurchase)}
+            </div>
+
+        </div>
+
+        <div class="rounded-xl border p-3 bg-emerald-50 dark:bg-emerald-900/20">
+
+            <div class="text-xs text-slate-500">
+                Son's Contribution
+            </div>
+
+            <div class="text-xl font-bold text-emerald-600">
+                ₹${formatAmount(grandContribution)}
+            </div>
+
+        </div>
+
+    </div>
+
+    <table class="min-w-full text-xs border border-slate-300 dark:border-slate-700">
+
+    <thead class="bg-slate-100 dark:bg-slate-800">
+
+    <tr>
+
+    <th class="border p-2 text-left">Item</th>
+
+    <th class="border p-2 text-center">Share</th>
+
+    <th class="border p-2 text-right">Qty</th>
+
+    <th class="border p-2 text-right">Purchase</th>
+
+    <th class="border p-2 text-right">Contribution</th>
+
+    </tr>
+
+    </thead>
+
+    <tbody>
+    `;
+
+    Object.values(summary)
+        .sort((a, b) => {
+
+            if (a.item === b.item) {
+                return a.share - b.share;
+            }
+
+            return a.item.localeCompare(b.item);
+
+        })
+        .forEach(row => {
+
+            html += `
+
+    <tr>
+
+    <td class="border p-2">
+    ${row.item}
+    </td>
+
+    <td class="border p-2 text-center">
+    ${row.share}%
+    </td>
+
+    <td class="border p-2 text-right">
+    ${formatAmount(row.qty)} ${row.unit}
+    </td>
+
+    <td class="border p-2 text-right">
+    ₹${formatAmount(row.purchase)}
+    </td>
+
+    <td class="border p-2 text-right font-semibold text-emerald-600">
+    ₹${formatAmount(row.contribution)}
+    </td>
+
+    </tr>
+
+    `;
+
+        });
+
+    html += `
+
+    </tbody>
+
+    <tfoot class="bg-slate-100 dark:bg-slate-800 font-bold">
+
+    <tr>
+
+    <td colspan="3" class="border p-2">
+    Grand Total
+    </td>
+
+    <td class="border p-2 text-right">
+    ₹${formatAmount(grandPurchase)}
+    </td>
+
+    <td class="border p-2 text-right text-emerald-700 text-base">
+    ₹${formatAmount(grandContribution)}
+    </td>
+
+    </tr>
+
+    </tfoot>
+
+    </table>
+
+    </div>
+    `;
+
+    document.getElementById("contribution-report").innerHTML = html;
+}
+
+function printSection(sectionToPrintId) {
+
+    const printableSections = [
+        "report-output-box",
+        "printable-contribution"
+    ];
+
+    printableSections.forEach(id => {
+
+        const el = document.getElementById(id);
+
+        if (!el) return;
+
+        el.style.display = (id === sectionToPrintId)
+            ? "block"
+            : "none";
+
+    });
+
+    window.print();
+
+    printableSections.forEach(id => {
+
+        const el = document.getElementById(id);
+
+        if (el) el.style.display = "";
+
+    });
+
+}
+
+function printContributionStatement() {
+    printSection("printable-contribution");
+}
+
 window.exportInvoicePDF = async function() {
     const element = document.getElementById('report-output-box');
     if (!element) return;
@@ -328,12 +604,9 @@ window.exportInvoicePDF = async function() {
 };
 
 function exportInvoicePDF() {
-    window.print();
+    printSection("report-output-box");
 }
 
-// ==========================================
-// 7. PREDICTIVE CRITICAL ALERTS (QUANTITY AWARE)
-// ==========================================
 function renderAlerts() {
     const alertDiv = document.getElementById('stock-alerts');
     alertDiv.innerHTML = "";

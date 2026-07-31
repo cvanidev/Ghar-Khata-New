@@ -64,22 +64,30 @@
                 max-width: 100% !important;
             }
 
-            #report-output-box, #report-output-box * {
+            #printable-contribution,
+            #printable-contribution *,
+            #report-output-box,
+            #report-output-box * {
+
                 background-color: #ffffff !important;
                 background: #ffffff !important;
                 color: #000000 !important;
                 box-shadow: none !important;
                 text-shadow: none !important;
+
             }
 
             .no-print, nav, button, header, footer {
                 display: none !important;
             }
 
+            #printable-contribution,
             #report-output-box {
+
                 width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
+
             }
 
             table th, table td {
@@ -312,6 +320,75 @@
             </div>
 
             <div id="report-output-box" class="print-container"></div>
+
+            <hr class="my-5 border-slate-300 dark:border-slate-700">
+
+            <!-- ========================================= -->
+            <!-- SON CONTRIBUTION STATEMENT -->
+            <!-- ========================================= -->
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mt-6 no-print">
+
+                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">
+                    👨 Son Contribution Statement
+                </h3>
+
+                <div class="grid grid-cols-2 gap-3">
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">
+                            From Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="contrib-from"
+                            class="w-full h-10 rounded-xl border border-slate-300 dark:border-slate-700 px-3 text-sm bg-white dark:bg-slate-900">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">
+                            To Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="contrib-to"
+                            class="w-full h-10 rounded-xl border border-slate-300 dark:border-slate-700 px-3 text-sm bg-white dark:bg-slate-900">
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-4">
+
+                    <button
+                        id="btn-generate-contribution"
+                        class="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition">
+
+                        📄 Generate Statement
+
+                    </button>
+
+                    <button
+                        onclick="printContributionStatement()"
+                        class="h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition">
+
+                        🖨 Print Statement
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- Printable Contribution Report -->
+            <div
+                id="printable-contribution"
+                class="mt-5">
+
+                <div id="contribution-report"></div>
+
+            </div>
         </div>
 
         <div id="screen-settings" class="hidden space-y-4 no-print">
