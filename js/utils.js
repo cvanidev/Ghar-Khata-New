@@ -5,6 +5,24 @@ function getLocalDateString(d = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+function parseLocalDate(dateString) {
+    const [year, month, day] = String(dateString).split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[char]));
+}
+
+function escapeForInlineHandler(value) {
+    return escapeHtml(String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/[\r\n\u2028\u2029]/g, ' '));
+}
+
 function generateId() {
     return 'row_' + Date.now() + Math.random().toString(36).substring(2, 6);
 }
@@ -62,11 +80,13 @@ function getEffectiveRate(rateTimeline, targetDateStr) {
     return activeRate;
 }
 
-function isDuplicateEntry(itemName, targetDateISOString) {
+function isDuplicateEntry(itemName, targetDateISOString, excludeEntryId = null) {
     const checkDateStr = getLocalDateString(new Date(targetDateISOString));
     return inventory.some(entry => {
         const entryDateStr = getLocalDateString(new Date(entry.date));
-        return entry.name.toLowerCase() === itemName.toLowerCase() && entryDateStr === checkDateStr;
+        return entry.id !== excludeEntryId &&
+            String(entry.name).toLowerCase() === String(itemName).toLowerCase() &&
+            entryDateStr === checkDateStr;
     });
 }
 

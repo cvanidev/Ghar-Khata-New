@@ -83,8 +83,45 @@ const DEFAULT_SYSTEM = {
     }
 };
 
-let db = JSON.parse(localStorage.getItem(STORAGE.CONFIG)) || DEFAULT_SYSTEM;
-let inventory = JSON.parse(localStorage.getItem(STORAGE.INVENTORY)) || [];
+function readStoredJson(key, fallback) {
+    try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : fallback;
+    } catch (error) {
+        console.warn(`Ignoring invalid saved data for ${key}.`, error);
+        return fallback;
+    }
+}
+
+function normalizeDatabase(candidate) {
+    const defaults = JSON.parse(JSON.stringify(DEFAULT_SYSTEM));
+    const source = candidate && typeof candidate === 'object' ? candidate : {};
+    const sourceItems = source.items && typeof source.items === 'object' ? source.items : {};
+    const categories = Array.isArray(source.categories) ? source.categories.filter(c => typeof c === 'string' && c.trim()) : defaults.categories;
+    const items = { ...defaults.items };
+    Object.entries(sourceItems).forEach(([category, values]) => {
+        if (Array.isArray(values)) items[category] = values.filter(item => typeof item === 'string' && item.trim());
+    });
+    const sourceRates = source.rates && typeof source.rates === 'object' ? source.rates : {};
+    const rates = { ...defaults.rates };
+    Object.keys(defaults.rates).forEach(key => {
+        if (Array.isArray(sourceRates[key]) && sourceRates[key].length > 0) rates[key] = sourceRates[key];
+    });
+
+    return {
+        ...defaults,
+        ...source,
+        categories: [...new Set(categories)],
+        items,
+        units: Array.isArray(source.units) ? source.units.filter(u => typeof u === 'string' && u.trim()) : defaults.units,
+        watchlist: Array.isArray(source.watchlist) ? source.watchlist.filter(item => typeof item === 'string') : [],
+        rates
+    };
+}
+
+let db = normalizeDatabase(readStoredJson(STORAGE.CONFIG, DEFAULT_SYSTEM));
+let inventory = readStoredJson(STORAGE.INVENTORY, []);
+if (!Array.isArray(inventory)) inventory = [];
 let editingEntryId = null;
 
 function saveConfig() {
@@ -140,7 +177,7 @@ function pullDatabaseFromSheet() {
     .then(data => {
         if (data && !data.error) {
             if (data.config && data.inventory) {
-                db = data.config;
+                db = normalizeDatabase(data.config);
                 inventory = data.inventory.map(row => {
                     const sanitizedRow = {};
                     Object.keys(row).forEach(key => { sanitizedRow[key.trim()] = row[key]; });

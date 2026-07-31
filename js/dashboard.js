@@ -44,11 +44,11 @@ function initDashboardDropdowns() {
     
     mainCat.innerHTML = '<option value="" disabled selected>-- Select Category --</option>';
     const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-    sortedCategories.forEach(c => mainCat.innerHTML += `<option value="${c}">${c}</option>`);
+    sortedCategories.forEach(c => mainCat.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`);
     mainCat.innerHTML += `<option value="__NEW_CAT__">+ Add New Category...</option>`;
     
     mainUnit.innerHTML = '';
-    db.units.forEach(u => mainUnit.innerHTML += `<option value="${u}">${u}</option>`);
+    db.units.forEach(u => mainUnit.innerHTML += `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
     mainUnit.innerHTML += `<option value="__NEW_UNIT__">+ Add New...</option>`;
     flyUnitInput.classList.add('hidden');
     
@@ -62,7 +62,7 @@ function syncItemsDropdown() {
     mainItem.innerHTML = '<option value="">-- Select Item --</option>';
     if (cat && cat !== '__NEW_CAT__' && db.items[cat]) {
         const sortedItems = [...db.items[cat]].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-        sortedItems.forEach(i => mainItem.innerHTML += `<option value="${i}">${i}</option>`);
+        sortedItems.forEach(i => mainItem.innerHTML += `<option value="${escapeHtml(i)}">${escapeHtml(i)}</option>`);
     }
     mainItem.innerHTML += `<option value="__NEW_ITEM__">+ Add New Item...</option>`;
     flyItemDiv.classList.add('hidden');
@@ -153,6 +153,10 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     if (amtInput === "" || isNaN(parseFloat(amtInput)) || parseFloat(amtInput) < 0) {
         validationErrors.push("• Please enter a valid numerical Amount (₹0 or more).");
     }
+    if (!mainQty.disabled && (qtyInput === "" || isNaN(parseFloat(qtyInput)) || parseFloat(qtyInput) < 0)) {
+        validationErrors.push("• Please enter a valid numerical Quantity (0 or more).");
+    }
+    if (!unit) validationErrors.push("• Please select or enter a Unit.");
 
     if (validationErrors.length > 0) {
         alert("⚠️ Incomplete Entry:\n\n" + validationErrors.join("\n"));
@@ -173,9 +177,9 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
         db.units.push(unit);
     }
 
-    const finalDate = new Date(dateInput);
+    const finalDate = parseLocalDate(dateInput);
 
-    if (typeof isDuplicateEntry === 'function' && isDuplicateEntry(name, finalDate.toISOString())) {
+    if (typeof isDuplicateEntry === 'function' && isDuplicateEntry(name, finalDate.toISOString(), editingEntryId)) {
         const proceed = confirm(`⚠️ Duplicate Alert:\n"${name}" has already been logged on this date. Log another anyway?`);
         if (!proceed) return;
     }
@@ -191,6 +195,12 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     if (editingEntryId) {
 
         const index = inventory.findIndex(i => i.id === editingEntryId);
+
+        if (index === -1) {
+            alert("This entry no longer exists. Please create it again.");
+            cancelEdit();
+            return;
+        }
 
         inventory[index] = {
             ...inventory[index],
@@ -239,25 +249,66 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
 
 function quickLog(type, volumeMl = null) {
     const dateInput = document.getElementById('quick-log-date').value;
-    const targetDateStr = dateInput ? dateInput : getLocalDateString();
-    const finalDate = new Date(targetDateStr);
-    
-    let name, category, qty, unit, cost;
+    const targetDateStr = dateInput || getLocalDateString();
+    const finalDate = parseLocalDate(targetDateStr);
+
+    let name;
+    let category;
+    let qty;
+    let unit;
+    let cost;
+    let contributor = "Self";
+    let share = 0;
 
     if (type === 'newspaper') {
         const day = finalDate.getDay();
-        const timeline = (day === 0 || day === 6) ? db.rates.newspaperWeekend : db.rates.newspaperWeekday;
+        const timeline = (day === 0 || day === 6)
+            ? db.rates.newspaperWeekend
+            : db.rates.newspaperWeekday;
+
         cost = getEffectiveRate(timeline, targetDateStr);
-        name = "Newspaper"; category = "Subscribed Bills"; qty = 1; unit = "Nos";
-    } else if (type === 'milk') {
+        name = ITEM.NEWSPAPER;
+        category = CATEGORY.SUBSCRIBED_BILLS;
+        qty = 1;
+        unit = "Nos";
+    }
+
+    if (type === 'milk') {
         qty = volumeMl / 1000;
-        const rate = getEffectiveRate(db.rates.milkPerLitre, targetDateStr);
+
+        const rate = getEffectiveRate(
+            db.rates.milkPerLitre,
+            targetDateStr
+        );
+
         cost = qty * rate;
-        name = "Milk"; category = "Dairy"; unit = "Litre";
+        name = ITEM.MILK;
+        category = CATEGORY.DAIRY;
+        unit = "Litre";
+
+        const contributionMode =
+            document.getElementById('quick-milk-contributor')?.value || "Self";
+
+        if (
+            contributionMode === "Son50" ||
+            contributionMode === "Son-50"
+        ) {
+            contributor = "Son";
+            share = 50;
+        } else if (
+            contributionMode === "Son100" ||
+            contributionMode === "Son-100"
+        ) {
+            contributor = "Son";
+            share = 100;
+        }
     }
 
     if (isDuplicateEntry(name, finalDate.toISOString())) {
-        const proceed = confirm(`⚠️ Duplicate Alert:\n"${name}" is already saved for this date. Log another one?`);
+        const proceed = confirm(
+            `⚠️ Duplicate Alert:\n"${name}" is already saved for this date. Log another one?`
+        );
+
         if (!proceed) return;
     }
 
@@ -267,8 +318,11 @@ function quickLog(type, volumeMl = null) {
         category,
         qty,
         unit,
-        amount: cost
+        amount: cost,
+        contributor,
+        share
     }));
+
     saveInventory();
 }
 
@@ -277,7 +331,7 @@ function logAbsence() {
     const reason = document.getElementById('absent-reason').value.trim() || "Not Delivered";
     const dateInput = document.getElementById('quick-log-date').value;
     const targetDateStr = dateInput ? dateInput : getLocalDateString();
-    const finalDate = new Date(targetDateStr);
+    const finalDate = parseLocalDate(targetDateStr);
 
     let name = type === 'milk' ? "Milk" : "Newspaper";
     let category = type === 'milk' ? "Dairy" : "Subscribed Bills";
@@ -373,8 +427,8 @@ function renderDashboardLedger() {
         html += `
             <div class="flex justify-between items-center bg-slate-50 border border-slate-200/60 dark:bg-slate-800/50 dark:border-slate-700/60 p-2.5 rounded-xl text-xs">
                 <div>
-                    <p class="font-bold text-sm text-slate-800 dark:text-slate-200">${nameVal} ${isAbsent ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
-                    <p class="text-slate-500 dark:text-slate-400 mt-0.5">${dateDisplay} | ${qtyVal} ${unitVal} ${commentVal ? `(${commentVal})` : ''}</p>
+                    <p class="font-bold text-sm text-slate-800 dark:text-slate-200">${escapeHtml(nameVal)} ${isAbsent ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-500 dark:text-slate-400 mt-0.5">${escapeHtml(dateDisplay)} | ${escapeHtml(qtyVal)} ${escapeHtml(unitVal)} ${commentVal ? `(${escapeHtml(commentVal)})` : ''}</p>
                 </div>
                 <div class="text-right font-bold text-sm text-slate-700 dark:text-slate-300">
                     <span>₹${amtDisplay}</span>

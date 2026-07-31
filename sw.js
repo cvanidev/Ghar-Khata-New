@@ -1,10 +1,15 @@
 // Increment this version number whenever you push changes to GitHub!
-const CACHE_NAME = 'ghar-khata-v1.0.0'; 
+const CACHE_NAME = 'ghar-khata-v2.3.0';
 
 const ASSETS = [
     './',
     './index.html',
     './app.js',
+    './js/utils.js',
+    './js/backup.js',
+    './js/settings.js',
+    './js/dashboard.js',
+    './js/reports.js',
     './manifest.json'
 ];
 
@@ -26,7 +31,22 @@ self.addEventListener('activate', (e) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    if (event.request.method !== 'GET') return;
+
+    event.respondWith(
+        caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+            if (!response || !response.ok) return response;
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+            return response;
+        }).catch(() => event.request.mode === 'navigate'
+            ? caches.match('./index.html')
+            : Response.error()))
     );
 });
 

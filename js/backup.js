@@ -49,7 +49,7 @@ function importBackup(file) {
             const backup = JSON.parse(e.target.result);
 
             // Validate backup
-            if (!backup.db || !backup.inventory) {
+            if (!backup.db || !Array.isArray(backup.inventory) || !Array.isArray(backup.db.categories)) {
                 alert("❌ Invalid Ghar Khata backup.");
                 return;
             }
@@ -80,7 +80,7 @@ Continue?`
 
             if (!proceed) return;
 
-            db = backup.db;
+            db = normalizeDatabase(backup.db);
             inventory = backup.inventory;
 
             localStorage.setItem(

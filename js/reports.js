@@ -20,7 +20,7 @@ repFilterType.addEventListener('change', () => {
         if (val === 'category') {
             const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
             sortedCategories.forEach(c => {
-                repTargetSelect.innerHTML += `<option value="${c}">${c}</option>`;
+                repTargetSelect.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
             });
         } else if (val === 'item') {
             const allItems = [];
@@ -28,7 +28,7 @@ repFilterType.addEventListener('change', () => {
                 list.forEach(i => { if(!allItems.includes(i)) allItems.push(i); });
             });
             allItems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).forEach(item => {
-                repTargetSelect.innerHTML += `<option value="${item}">${item}</option>`;
+                repTargetSelect.innerHTML += `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`;
             });
         }
     }
@@ -40,8 +40,8 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
     const eDate = document.getElementById('rep-end').value;
     if(!sDate || !eDate) return alert("Select Date Limits");
 
-    const start = new Date(sDate).setHours(0,0,0,0);
-    const end = new Date(eDate).setHours(23,59,59,999);
+    const start = parseLocalDate(sDate).setHours(0,0,0,0);
+    const end = parseLocalDate(eDate).setHours(23,59,59,999);
     const filter = repFilterType.value;
     const target = repTargetSelect.value;
 
@@ -63,8 +63,8 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
         listHtml += `
             <div class="flex justify-between items-center text-xs py-2.5 border-b border-slate-100 dark:border-slate-700/60 group">
                 <div>
-                    <p class="font-bold text-sm text-slate-800 dark:text-slate-200">${i.name} ${i.status === 'Absent' ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
-                    <p class="text-slate-500 dark:text-slate-400 mt-0.5">${new Date(i.date).toLocaleDateString('en-IN')} | ${i.qty} ${i.unit} ${i.comment ? `(${i.comment})` : ''}</p>
+                    <p class="font-bold text-sm text-slate-800 dark:text-slate-200">${escapeHtml(i.name)} ${i.status === 'Absent' ? '<span class="text-red-500 dark:text-red-400 font-semibold">[Absent]</span>' : ''}</p>
+                    <p class="text-slate-500 dark:text-slate-400 mt-0.5">${new Date(i.date).toLocaleDateString('en-IN')} | ${escapeHtml(i.qty)} ${escapeHtml(i.unit)} ${i.comment ? `(${escapeHtml(i.comment)})` : ''}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-sm text-slate-800 dark:text-slate-200">
@@ -72,14 +72,14 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
                     </span>
 
                     <button
-                        onclick="loadEntryForEdit('${i.id}')"
+                        onclick="loadEntryForEdit('${escapeForInlineHandler(i.id)}')"
                         class="text-blue-500 hover:text-blue-700 font-bold p-1 text-sm"
                         title="Edit">
                         ✏️
                     </button>
 
                     <button
-                        onclick="deleteLedgerRow('${i.id}')"
+                        onclick="deleteLedgerRow('${escapeForInlineHandler(i.id)}')"
                         class="text-red-400 hover:text-red-600 font-bold p-1 text-sm"
                         title="Delete">
                         🗑️
@@ -120,8 +120,8 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
 
     if(!sDate || !eDate) return alert("Select Date Limits");
 
-    const start = new Date(sDate).setHours(0,0,0,0);
-    const end = new Date(eDate).setHours(23,59,59,999);
+    const start = parseLocalDate(sDate).setHours(0,0,0,0);
+    const end = parseLocalDate(eDate).setHours(23,59,59,999);
 
     const matched = inventory.filter(i => {
         const d = new Date(i.date).getTime();
@@ -154,7 +154,7 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                 <td class="py-1 px-1 font-semibold text-slate-900">${cleanDateStr}</td>
                 <td class="py-1 px-1 text-center font-semibold text-red-600">0 L</td>
                 <td class="py-1 px-1 text-right text-slate-400">-</td>
-                <td class="py-1 px-1 text-right font-bold text-red-600 italic">${i.comment || 'Absent'}</td>
+                <td class="py-1 px-1 text-right font-bold text-red-600 italic">${escapeHtml(i.comment || 'Absent')}</td>
             </tr>`;
         }
         const itemQty = parseFloat(i.qty) || 0;
@@ -177,7 +177,7 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
                 <td class="py-1 px-1 font-semibold text-slate-900">${cleanDateStr}</td>
                 <td class="py-1 px-1 text-center font-semibold text-red-600">0</td>
                 <td class="py-1 px-1 text-right text-slate-400">-</td>
-                <td class="py-1 px-1 text-right font-bold text-red-600 italic">${i.comment || 'No Paper'}</td>
+                <td class="py-1 px-1 text-right font-bold text-red-600 italic">${escapeHtml(i.comment || 'No Paper')}</td>
             </tr>`;
         }
         const itemQty = parseFloat(i.qty) || 1;
@@ -270,8 +270,8 @@ function generateContributionStatement() {
         return;
     }
 
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
+    const fromDate = parseLocalDate(from);
+    const toDate = parseLocalDate(to);
     toDate.setHours(23, 59, 59, 999);
 
     const entries = inventory.filter(item => {
@@ -444,7 +444,7 @@ function generateContributionStatement() {
     <tr>
 
     <td class="border p-2">
-    ${row.item}
+    ${escapeHtml(row.item)}
     </td>
 
     <td class="border p-2 text-center">
@@ -670,7 +670,7 @@ function renderAlerts() {
             
             alertDiv.innerHTML += `
                 <div class="flex justify-between p-2.5 rounded-lg border text-xs font-medium ${theme}">
-                    <span>${StrategyTag} <strong>${name}</strong></span>
+                    <span>${StrategyTag} <strong>${escapeHtml(name)}</strong></span>
                     <span>${label}</span>
                 </div>`;
         }

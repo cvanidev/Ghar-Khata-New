@@ -138,18 +138,65 @@
                 </div>
                 
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1">
-                        <span class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Newspaper Log</span>
-                        <button onclick="quickLog('newspaper')" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-white font-medium py-2 px-1 rounded-xl text-xs transition">📰 Paper Entry</button>
+
+                    <!-- Newspaper -->
+                    <div class="space-y-2">
+
+                        <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">
+                            Newspaper Log
+                        </span>
+
+                        <button
+                            onclick="quickLog('newspaper')"
+                            class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-white font-medium mt-2 py-2 rounded-xl text-xs transition">
+                            📰 Paper Entry
+                        </button>
+
                     </div>
+
+                    <!-- Milk -->
                     <div class="space-y-1">
-                        <span class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Milk Log (Select Vol)</span>
-                        <div class="flex rounded-xl bg-blue-50 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900 p-0.5 gap-1">
-                            <button onclick="quickLog('milk', 500)" class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 dark:hover:bg-slate-700/60 transition">500ml</button>
-                            <button onclick="quickLog('milk', 750)" class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 dark:hover:bg-slate-700/60 transition">750ml</button>
-                            <button onclick="quickLog('milk', 1000)" class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xs py-1.5 rounded-lg shadow-3xs hover:bg-blue-50 dark:hover:bg-slate-700/60 transition">1L</button>
+
+                        <div class="flex items-center justify-between">
+
+                            <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">
+                                Milk Log
+                            </span>
+
+                            <select
+                                id="quick-milk-contributor"
+                                class="w-28 rounded-md border border-slate-200 dark:border-slate-700
+                                    bg-white dark:bg-slate-950 text-[11px] px-2 py-1">
+
+                                <option value="Self">Self</option>
+                                <option value="Son50">Son 50%</option>
+                                <option value="Son100">Son 100%</option>
+
+                            </select>
+
                         </div>
+
+                        <div class="flex rounded-xl bg-blue-50 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900 p-0.5 gap-1">
+
+                            <button onclick="quickLog('milk',500)"
+                                class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xs py-1.5 rounded-lg shadow-3xs">
+                                500ml
+                            </button>
+
+                            <button onclick="quickLog('milk',750)"
+                                class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xs py-1.5 rounded-lg shadow-3xs">
+                                750ml
+                            </button>
+
+                            <button onclick="quickLog('milk',1000)"
+                                class="flex-1 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-bold text-xs py-1.5 rounded-lg shadow-3xs">
+                                1L
+                            </button>
+
+                        </div>
+
                     </div>
+
                 </div>
 
                 <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex flex-col gap-2">

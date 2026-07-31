@@ -36,8 +36,8 @@ function renderSettingsWorkspace() {
         const checked = db.watchlist.includes(itemName) ? 'checked' : '';
         wlBox.innerHTML += `
             <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                <input type="checkbox" ${checked} onchange="toggleWatchlist('${itemName}')" class="rounded border-slate-300 dark:border-slate-600 text-blue-600">
-                <span class="truncate">${itemName}</span>
+                <input type="checkbox" ${checked} onchange="toggleWatchlist('${escapeForInlineHandler(itemName)}')" class="rounded border-slate-300 dark:border-slate-600 text-blue-600">
+                <span class="truncate">${escapeHtml(itemName)}</span>
             </label>`;
     });
     if(allUniqueItems.length === 0) {
@@ -50,11 +50,11 @@ function renderSettingsWorkspace() {
     const sortedCategories = [...db.categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     
     sortedCategories.forEach(cat => {
-        const safeCatKey = cat.replace(/[^a-zA-Z0-9]/g, '');
+        const safeCatKey = encodeURIComponent(cat);
         let itemsHtml = (db.items[cat] || []).map((item, idx) => `
             <div class="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-900/40 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                <span class="truncate pr-1 dark:text-slate-300">${item}</span>
-                <button onclick="deleteCatalogItem('${cat}', ${idx})" class="text-slate-400 dark:text-slate-500 hover:text-red-500">✕</button>
+                <span class="truncate pr-1 dark:text-slate-300">${escapeHtml(item)}</span>
+                <button onclick="deleteCatalogItem('${escapeForInlineHandler(cat)}', ${idx})" class="text-slate-400 dark:text-slate-500 hover:text-red-500">✕</button>
             </div>
         `).join('');
         
@@ -62,14 +62,14 @@ function renderSettingsWorkspace() {
             <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2 flex flex-col justify-between shadow-3xs dark:shadow-none">
                 <div>
                     <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1 mb-1.5">
-                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-1">${cat}</span>
-                        <button onclick="deleteCategory('${cat}')" class="text-xs text-red-500 font-medium shrink-0 hover:underline">Delete</button>
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-1">${escapeHtml(cat)}</span>
+                        <button onclick="deleteCategory('${escapeForInlineHandler(cat)}')" class="text-xs text-red-500 font-medium shrink-0 hover:underline">Delete</button>
                     </div>
                     <div class="space-y-1.5 max-h-28 overflow-y-auto no-scrollbar">${itemsHtml || '<p class="text-xs italic text-slate-300 dark:text-slate-600">Empty</p>'}</div>
                 </div>
                 <div class="flex gap-1 pt-2 mt-auto border-t border-slate-50 dark:border-slate-700">
-                    <input type="text" id="add-item-to-${safeCatKey}" placeholder="Add..." class="w-2/3 text-xs border dark:border-slate-600 dark:bg-slate-900 p-1.5 rounded-lg text-slate-800 dark:text-slate-100">
-                    <button onclick="addCatalogItem('${cat}')" class="w-1/3 bg-slate-900 text-white dark:bg-slate-700 dark:text-slate-100 text-xs rounded-lg font-bold">+</button>
+                    <input type="text" id="add-item-to-${escapeHtml(safeCatKey)}" placeholder="Add..." class="w-2/3 text-xs border dark:border-slate-600 dark:bg-slate-900 p-1.5 rounded-lg text-slate-800 dark:text-slate-100">
+                    <button onclick="addCatalogItem('${escapeForInlineHandler(cat)}')" class="w-1/3 bg-slate-900 text-white dark:bg-slate-700 dark:text-slate-100 text-xs rounded-lg font-bold">+</button>
                 </div>
             </div>
         `;
@@ -121,7 +121,7 @@ function deleteCategory(cat) {
     }
 }
 function addCatalogItem(cat) {
-    const safeCatKey = cat.replace(/[^a-zA-Z0-9]/g, '');
+    const safeCatKey = encodeURIComponent(cat);
     const inputId = `add-item-to-${safeCatKey}`;
     const val = document.getElementById(inputId).value.trim();
     if(!val) return;
