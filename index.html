@@ -406,21 +406,29 @@
 
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 mt-4">
+                <div class="grid grid-cols-3 gap-3 mt-4">
 
                     <button
                         id="btn-generate-contribution"
                         class="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition">
 
-                        📄 Generate Statement
+                        📄 Generate
 
                     </button>
 
                     <button
-                        onclick="printContributionStatement()"
+                        onclick="printReport('contribution')"
                         class="h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition">
 
-                        🖨 Print Statement
+                        🖨 Print
+
+                    </button>
+
+                    <button
+                        onclick="shareReport('contribution')"
+                        class="h-10 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm transition">
+
+                        📤 Share
 
                     </button>
 

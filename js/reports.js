@@ -1,3 +1,138 @@
+// ==========================================
+// REPORT UTILITIES
+// ==========================================
+
+function getReportElement(type) {
+
+    switch (type) {
+
+        case "vendor":
+            return document.getElementById("report-output-box");
+
+        case "contribution":
+            return document.getElementById("printable-contribution");
+
+        default:
+            return null;
+
+    }
+
+}
+
+function printReport(type) {
+
+    const report = getReportElement(type);
+
+    if (!report || !report.innerHTML.trim()) {
+        alert("Please generate the report first.");
+        return;
+    }
+
+    const printWindow = window.open("", "_blank");
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Ghar Khata Report</title>
+
+<style>
+
+body{
+    font-family:Arial,Helvetica,sans-serif;
+    margin:20px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    border:1px solid #999;
+    padding:8px;
+    font-size:12px;
+}
+
+th{
+    background:#f3f4f6;
+}
+
+h2,h3{
+    text-align:center;
+}
+
+.no-print,
+button {
+    display: none !important;
+}
+
+</style>
+
+</head>
+
+<body>
+
+${report.innerHTML}
+
+<script>
+window.onload = function () {
+    window.print();
+    window.close();
+}
+</script>
+
+</body>
+
+</html>
+    `);
+
+    printWindow.document.close();
+
+}
+
+async function shareReport(type) {
+
+    const report = getReportElement(type);
+
+    if (!report || !report.innerText.trim()) {
+        alert("Please generate the report first.");
+        return;
+    }
+
+    const title =
+        type === "vendor"
+            ? "Vendor Bill"
+            : "Son Contribution Statement";
+
+    if (navigator.share) {
+
+        try {
+
+            await navigator.share({
+
+                title,
+
+                text: report.innerText.trim()
+
+            });
+
+        } catch (err) {
+
+            // User cancelled sharing
+
+        }
+
+    } else {
+
+        alert("Sharing is not supported on this device.");
+
+    }
+
+}
+
 const repFilterType = document.getElementById('rep-filter-type');
 const repTargetSelect = document.getElementById('rep-target-select');
 
@@ -236,10 +371,24 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
     outBox.classList.remove('hidden');
     outBox.innerHTML = `
         <div class="space-y-1 bg-white p-1">
-            <div class="flex justify-end no-print mb-2">
-                <button onclick="exportInvoicePDF()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs cursor-pointer shadow-xs">
-                    📥 Download / Print A5 Invoice
+            <div class="flex justify-end gap-2 no-print mb-2">
+
+                <button
+                    onclick="printReport('vendor')"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs">
+
+                    🖨 Print
+
                 </button>
+
+                <button
+                    onclick="shareReport('vendor')"
+                    class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs">
+
+                    📤 Share
+
+                </button>
+
             </div>
             <div style="background-color: #ffffff !important; color: #000000 !important;" class="p-1 border-0 shadow-none">
                 <div class="border-b-2 border-slate-900 pb-1 mb-1.5 flex justify-between items-end">
@@ -530,81 +679,6 @@ function printSection(sectionToPrintId) {
 
     });
 
-}
-
-function printContributionStatement() {
-    printSection("printable-contribution");
-}
-
-window.exportInvoicePDF = async function() {
-    const element = document.getElementById('report-output-box');
-    if (!element) return;
-
-    const noPrintElements = element.querySelectorAll('.no-print');
-    noPrintElements.forEach(el => el.style.display = 'none');
-
-    try {
-        const canvas = await html2canvas(element, {
-            scale: 2,
-            backgroundColor: '#ffffff',
-            useCORS: true,
-            logging: false,
-            onclone: (clonedDoc) => {
-                const clonedBox = clonedDoc.getElementById('report-output-box');
-                if (clonedBox) {
-                    clonedBox.style.backgroundColor = '#ffffff';
-                    clonedBox.style.color = '#000000';
-                    clonedBox.style.border = 'none';
-                    clonedBox.style.boxShadow = 'none';
-                    
-                    const containers = clonedBox.querySelectorAll('*');
-                    containers.forEach(child => {
-                        child.style.backgroundColor = 'transparent';
-                        child.style.color = '#000000';
-                        if (!child.tagName.toLowerCase().includes('tr') && 
-                            !child.tagName.toLowerCase().includes('th') && 
-                            !child.tagName.toLowerCase().includes('td') &&
-                            !child.tagName.toLowerCase().includes('h3') &&
-                            !child.tagName.toLowerCase().includes('h4')) {
-                            child.style.borderColor = 'transparent';
-                        }
-                    });
-                }
-            }
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a5'
-        });
-
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-
-        const imgProps = pdf.getImageProperties(imgData);
-        let renderedHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-        // Cap scaling to ensure content strictly fits on 1 page height
-        if (renderedHeight > pdfHeight) {
-            renderedHeight = pdfHeight;
-        }
-
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, renderedHeight);
-        pdf.save(`Vendor_Invoice_${new Date().toISOString().slice(0,10)}.pdf`);
-
-    } catch (err) {
-        console.error("PDF Export Error:", err);
-        window.print();
-    } finally {
-        noPrintElements.forEach(el => el.style.display = '');
-    }
-};
-
-function exportInvoicePDF() {
-    printSection("report-output-box");
 }
 
 function renderAlerts() {
