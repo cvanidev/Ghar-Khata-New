@@ -203,66 +203,206 @@ function triggerCloudPush() {
         });
 }
 
-function pullDatabaseFromSheet() {
+function pullDatabaseFromSheet(attempt = 1) {
+
+    const syncStart = performance.now();
+    const MAX_ATTEMPTS = 2;
+    const TIMEOUT_MS = 15000;
+
     if (!navigator.onLine || BACKEND_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT")) {
         setSyncStatus('Local Only');
         renderDashboardLedger();
         return;
     }
-    setSyncStatus('Syncing...');
+
+    setSyncStatus(
+        attempt === 1
+            ? 'Syncing...'
+            : 'Retrying...'
+    );
+
     const requestId = ++latestPullRequest;
     const revisionAtRequest = localRevision;
-    
-    fetch(BACKEND_API_URL)
-    .then(res => {
-        if (!res.ok) throw new Error(`Cloud pull failed (${res.status}).`);
-        return res.json();
+
+    const controller = new AbortController();
+
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, TIMEOUT_MS);
+
+    console.time(`GharKhata Cloud Pull Attempt ${attempt}`);
+
+    fetch(BACKEND_API_URL, {
+        signal: controller.signal
     })
-    .then(data => {
-        if (!data || data.error) {
-            throw new Error(data?.error || 'Cloud returned an invalid response.');
-        }
-        if (requestId !== latestPullRequest || revisionAtRequest !== localRevision) {
-            setSyncStatus('Local changes pending');
-            return;
-        }
-        if (data.config && data.inventory) {
-            if (!Array.isArray(data.inventory)) {
-                throw new Error('Cloud returned an invalid inventory format.');
+
+        .then(res => {
+
+            if (!res.ok) {
+                throw new Error(`Cloud pull failed (${res.status}).`);
             }
-            db = normalizeDatabase(data.config);
-            inventory = normalizeInventory(data.inventory);
 
-            alphabetizeCatalogItems();
-            localStorage.setItem('gk_v7_config', JSON.stringify(db));
-            localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
-        } else {
-            const rawArr = Array.isArray(data) ? data : data.inventory;
-            if (!Array.isArray(rawArr)) {
-                throw new Error('Cloud returned an invalid inventory format.');
+            return res.json();
+
+        })
+
+        .then(data => {
+
+            if (!data || data.error) {
+                throw new Error(
+                    data?.error ||
+                    'Cloud returned an invalid response.'
+                );
             }
-            inventory = normalizeInventory(rawArr);
-            localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
-        }
 
-        setSyncStatus('Synced');
-        initDashboardDropdowns();
-        renderDashboardLedger();
+            if (
+                requestId !== latestPullRequest ||
+                revisionAtRequest !== localRevision
+            ) {
+                setSyncStatus('Local changes pending');
+                return;
+            }
 
-        if(!document.getElementById('screen-reports').classList.contains('hidden')) {
-            const isBillScreenActive = !document.getElementById('vendor-bill-scope').disabled;
-            if(isBillScreenActive) {
-                document.getElementById('btn-generate-bill').click();
+            if (data.config && data.inventory) {
+
+                if (!Array.isArray(data.inventory)) {
+                    throw new Error(
+                        'Cloud returned an invalid inventory format.'
+                    );
+                }
+
+                db = normalizeDatabase(data.config);
+                inventory = normalizeInventory(data.inventory);
+
+                alphabetizeCatalogItems();
+
+                localStorage.setItem(
+                    STORAGE.CONFIG,
+                    JSON.stringify(db)
+                );
+
+                localStorage.setItem(
+                    STORAGE.INVENTORY,
+                    JSON.stringify(inventory)
+                );
+
             } else {
-                document.getElementById('btn-generate-rep').click();
+
+                const rawArr =
+                    Array.isArray(data)
+                        ? data
+                        : data.inventory;
+
+                if (!Array.isArray(rawArr)) {
+                    throw new Error(
+                        'Cloud returned an invalid inventory format.'
+                    );
+                }
+
+                inventory = normalizeInventory(rawArr);
+
+                localStorage.setItem(
+                    STORAGE.INVENTORY,
+                    JSON.stringify(inventory)
+                );
+
             }
-        }
-    })
-    .catch(err => {
-        setSyncStatus('Failed');
-        console.error("Cloud synchronization download failed:", err);
-        renderDashboardLedger();
-    });
+
+            setSyncStatus('Synced');
+
+            initDashboardDropdowns();
+            renderDashboardLedger();
+
+            if (
+                !document
+                    .getElementById('screen-reports')
+                    .classList
+                    .contains('hidden')
+            ) {
+
+                const isBillScreenActive =
+                    !document
+                        .getElementById('vendor-bill-scope')
+                        .disabled;
+
+                if (isBillScreenActive) {
+
+                    document
+                        .getElementById('btn-generate-bill')
+                        .click();
+
+                } else {
+
+                    document
+                        .getElementById('btn-generate-rep')
+                        .click();
+
+                }
+
+            }
+
+            console.log(
+                `GharKhata Cloud Pull Attempt ${attempt} succeeded in`,
+                Math.round(performance.now() - syncStart),
+                'ms'
+            );
+
+        })
+
+        .catch(err => {
+
+            const elapsed = Math.round(
+                performance.now() - syncStart
+            );
+
+            const isTimeout =
+                err.name === 'AbortError';
+
+            console.error(
+                `Cloud Pull Attempt ${attempt} failed after ${elapsed} ms:`,
+                err
+            );
+
+            if (attempt < MAX_ATTEMPTS) {
+
+                console.log(
+                    'Retrying cloud pull in 1 second...'
+                );
+
+                setSyncStatus('Retrying...');
+
+                setTimeout(() => {
+                    pullDatabaseFromSheet(attempt + 1);
+                }, 1000);
+
+                return;
+            }
+
+            setSyncStatus(
+                isTimeout
+                    ? 'Sync Timeout'
+                    : 'Failed'
+            );
+
+            console.error(
+                'Cloud synchronization failed after all attempts.'
+            );
+
+            // Keep using locally stored data.
+            renderDashboardLedger();
+
+        })
+
+        .finally(() => {
+
+            clearTimeout(timeoutId);
+
+            console.timeEnd(
+                `GharKhata Cloud Pull Attempt ${attempt}`
+            );
+
+        });
+
 }
 
 function syncForce() {

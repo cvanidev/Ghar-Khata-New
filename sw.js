@@ -1,5 +1,5 @@
 // Increment this version number whenever you push changes to GitHub!
-const CACHE_NAME = 'ghar-khata-v2.4.0';
+const CACHE_NAME = 'ghar-khata-v7.0.0';
 
 const ASSETS = [
     './',
