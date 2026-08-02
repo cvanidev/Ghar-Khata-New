@@ -212,7 +212,11 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
             amount: finalAmt,
             comment: finalComment,
             contributor,
-            share
+            share,
+
+            // Sync metadata
+            lastModified: Date.now(),
+            syncStatus: SYNC.PENDING
         };
 
         editingEntryId = null;

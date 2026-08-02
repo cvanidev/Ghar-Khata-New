@@ -26,6 +26,13 @@ const STATUS = {
     ABSENT: 'Absent'
 };
 
+const SYNC = {
+    PENDING: 'pending',
+    SYNCING: 'syncing',
+    SYNCED: 'synced',
+    CONFLICT: 'conflict'
+};
+
 const ITEM = {
     MILK: 'Milk',
     NEWSPAPER: 'Newspaper'
@@ -154,13 +161,19 @@ let localRevision = 0;
 let latestPullRequest = 0;
 let cloudPushQueue = Promise.resolve();
 
+// New sync state
+let hasPendingChanges = false;
+let syncTimer = null;
+
 function markLocalChange() {
     localRevision += 1;
+    hasPendingChanges = true;
 }
 
 function saveConfig() {
     alphabetizeCatalogItems();
     markLocalChange();
+    setSyncStatus('Pending Changes');
     localStorage.setItem(STORAGE.CONFIG, JSON.stringify(db));
     if (typeof renderSettingsWorkspace === 'function') {
         renderSettingsWorkspace();
@@ -170,10 +183,26 @@ function saveConfig() {
 
 function saveInventory() {
     markLocalChange();
+    setSyncStatus('Pending Changes');
     localStorage.setItem(STORAGE.INVENTORY, JSON.stringify(inventory));
     triggerCloudPush();
     renderDashboardLedger();
 }
+
+/*
+function scheduleCloudPush(delay = 2000) {
+
+    if (syncTimer) {
+        clearTimeout(syncTimer);
+    }
+
+    syncTimer = setTimeout(() => {
+        syncTimer = null;
+        triggerCloudPush();
+    }, delay);
+
+}
+*/    
 
 function triggerCloudPush() {
     if (!navigator.onLine || BACKEND_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT")) {
@@ -198,8 +227,9 @@ function triggerCloudPush() {
             console.log("State and Catalog configurations successfully synced to Google Sheets.");
         })
         .catch(err => {
+            console.error("PUSH FAILED:", err);
+            console.trace("Push failure stack:");
             if (revision === localRevision) setSyncStatus('Failed');
-            console.error("Cloud push transmission failed:", err);
         });
 }
 
@@ -384,9 +414,8 @@ function pullDatabaseFromSheet(attempt = 1) {
                     : 'Failed'
             );
 
-            console.error(
-                'Cloud synchronization failed after all attempts.'
-            );
+            console.error("PULL FAILED:", err);
+            console.trace("Pull failure stack:");
 
             // Keep using locally stored data.
             renderDashboardLedger();

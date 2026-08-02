@@ -237,7 +237,13 @@ document.getElementById('btn-generate-rep').addEventListener('click', () => {
 
 function deleteLedgerRow(rowId) {
     if (confirm("Are you sure you want to permanently delete this logged item row?")) {
-        inventory = inventory.filter(entry => entry.id !== rowId);
+        const entry = inventory.find(e => e.id === rowId);
+
+        if (entry) {
+            entry.deleted = true;
+            entry.syncStatus = SYNC.PENDING;
+            entry.lastModified = Date.now();
+        }
         saveInventory();
         if(document.getElementById('vendor-bill-scope').disabled) {
             document.getElementById('btn-generate-rep').click();

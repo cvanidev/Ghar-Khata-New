@@ -51,7 +51,12 @@ function createEntry(data) {
         status: data.status || STATUS.DELIVERED,
         comment: data.comment || "",
         contributor: data.contributor || "Self",
-        share: Number(data.share ?? 0)
+        share: Number(data.share ?? 0),
+
+        // Sync metadata
+        syncStatus: SYNC.PENDING,
+        lastModified: Date.now(),
+        deleted: false
     };
 }
 
