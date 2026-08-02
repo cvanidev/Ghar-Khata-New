@@ -13,7 +13,7 @@ function renderSettingsWorkspace() {
             
         db.rates[rateKey].forEach((r, idx) => {
             html += `<div class="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-900/40 p-2 rounded-lg">
-                <span class="dark:text-slate-300">From: <strong>${r.dateFrom}</strong> ➔ <strong>₹${r.val}</strong></span>
+                <span class="dark:text-slate-300">From: <strong>${escapeHtml(r.dateFrom)}</strong> ➔ <strong>₹${escapeHtml(r.val)}</strong></span>
                 <button onclick="deleteRateRule('${rateKey}', ${idx})" class="text-red-500 font-bold px-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded">✕</button>
             </div>`;
         });
@@ -88,10 +88,16 @@ function toggleWatchlist(itemName) {
 function addRateRule(key) {
     const d = prompt("Enter Effective Date (YYYY-MM-DD):", getLocalDateString());
     const v = prompt("Enter Rate Value (₹):");
-    if(d && v) {
-        db.rates[key].push({ dateFrom: d, val: parseFloat(v) });
-        saveConfig(); renderSettingsWorkspace();
+    if (d === null || v === null) return;
+
+    const value = Number(v);
+    if (!isValidDateString(d) || !Number.isFinite(value) || value < 0) {
+        alert("Enter a real date in YYYY-MM-DD format and a rate of ₹0 or more.");
+        return;
     }
+
+    db.rates[key].push({ dateFrom: d, val: value });
+    saveConfig(); renderSettingsWorkspace();
 }
 function deleteRateRule(key, idx) {
     if (db.rates[key].length === 1) {

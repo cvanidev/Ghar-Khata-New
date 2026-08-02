@@ -49,7 +49,9 @@ function importBackup(file) {
             const backup = JSON.parse(e.target.result);
 
             // Validate backup
-            if (!backup.db || !Array.isArray(backup.inventory) || !Array.isArray(backup.db.categories)) {
+            if (!backup.db || !Array.isArray(backup.inventory) ||
+                !backup.inventory.every(row => row && typeof row === "object" && !Array.isArray(row)) ||
+                !Array.isArray(backup.db.categories)) {
                 alert("❌ Invalid Ghar Khata backup.");
                 return;
             }
@@ -81,7 +83,8 @@ Continue?`
             if (!proceed) return;
 
             db = normalizeDatabase(backup.db);
-            inventory = backup.inventory;
+            inventory = normalizeInventory(backup.inventory);
+            markLocalChange();
 
             localStorage.setItem(
                 STORAGE.CONFIG,

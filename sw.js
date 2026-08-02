@@ -1,16 +1,16 @@
 // Increment this version number whenever you push changes to GitHub!
-const CACHE_NAME = 'ghar-khata-v2.3.0';
+const CACHE_NAME = 'ghar-khata-v2.4.0';
 
 const ASSETS = [
     './',
     './index.html',
+    './manifest.json',
     './app.js',
     './js/utils.js',
     './js/backup.js',
     './js/settings.js',
     './js/dashboard.js',
-    './js/reports.js',
-    './manifest.json'
+    './js/reports.js'
 ];
 
 // Installs and caches assets
@@ -37,6 +37,14 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
+
+    // Cloud ledger responses must always come from the server; caching them
+    // would make a manual pull return stale data indefinitely.
+    const requestUrl = new URL(event.request.url);
+    if (requestUrl.origin === 'https://script.google.com' && requestUrl.pathname.startsWith('/macros/')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
 
     event.respondWith(
         caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {

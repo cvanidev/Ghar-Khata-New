@@ -601,7 +601,7 @@ function generateContributionStatement() {
     </td>
 
     <td class="border p-2 text-right">
-    ${formatAmount(row.qty)} ${row.unit}
+    ${formatAmount(row.qty)} ${escapeHtml(row.unit)}
     </td>
 
     <td class="border p-2 text-right">

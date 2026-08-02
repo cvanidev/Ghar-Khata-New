@@ -10,7 +10,7 @@ if (!apiKey) {
 }
 
 const BASE_URL = "https://script.google.com/macros/s/AKfycbzONERqJZJknMPc1E7qfNKeTTj0ZNii69yC88ydGxalbI0yFyRNVNg4EM1fwBIT7o0/exec";
-const BACKEND_API_URL = `${BASE_URL}?token=${apiKey}`;
+const BACKEND_API_URL = `${BASE_URL}?token=${encodeURIComponent(apiKey || '')}`;
 
 // ==========================================
 // APP CONSTANTS
@@ -93,6 +93,29 @@ function readStoredJson(key, fallback) {
     }
 }
 
+function isValidDateString(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return false;
+    const [year, month, day] = String(value).split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+function isValidRateRule(rule) {
+    return rule && typeof rule === 'object' &&
+        isValidDateString(rule.dateFrom) &&
+        Number.isFinite(Number(rule.val)) && Number(rule.val) >= 0;
+}
+
+function normalizeInventory(candidate) {
+    if (!Array.isArray(candidate)) return [];
+
+    return candidate
+        .filter(row => row && typeof row === 'object' && !Array.isArray(row))
+        .map(row => Object.fromEntries(
+            Object.entries(row).map(([key, value]) => [String(key).trim(), value])
+        ));
+}
+
 function normalizeDatabase(candidate) {
     const defaults = JSON.parse(JSON.stringify(DEFAULT_SYSTEM));
     const source = candidate && typeof candidate === 'object' ? candidate : {};
@@ -105,7 +128,12 @@ function normalizeDatabase(candidate) {
     const sourceRates = source.rates && typeof source.rates === 'object' ? source.rates : {};
     const rates = { ...defaults.rates };
     Object.keys(defaults.rates).forEach(key => {
-        if (Array.isArray(sourceRates[key]) && sourceRates[key].length > 0) rates[key] = sourceRates[key];
+        const validRules = Array.isArray(sourceRates[key])
+            ? sourceRates[key]
+                .filter(isValidRateRule)
+                .map(rule => ({ dateFrom: rule.dateFrom, val: Number(rule.val) }))
+            : [];
+        if (validRules.length > 0) rates[key] = validRules;
     });
 
     return {
@@ -120,12 +148,19 @@ function normalizeDatabase(candidate) {
 }
 
 let db = normalizeDatabase(readStoredJson(STORAGE.CONFIG, DEFAULT_SYSTEM));
-let inventory = readStoredJson(STORAGE.INVENTORY, []);
-if (!Array.isArray(inventory)) inventory = [];
+let inventory = normalizeInventory(readStoredJson(STORAGE.INVENTORY, []));
 let editingEntryId = null;
+let localRevision = 0;
+let latestPullRequest = 0;
+let cloudPushQueue = Promise.resolve();
+
+function markLocalChange() {
+    localRevision += 1;
+}
 
 function saveConfig() {
     alphabetizeCatalogItems();
+    markLocalChange();
     localStorage.setItem(STORAGE.CONFIG, JSON.stringify(db));
     if (typeof renderSettingsWorkspace === 'function') {
         renderSettingsWorkspace();
@@ -134,6 +169,7 @@ function saveConfig() {
 }
 
 function saveInventory() {
+    markLocalChange();
     localStorage.setItem(STORAGE.INVENTORY, JSON.stringify(inventory));
     triggerCloudPush();
     renderDashboardLedger();
@@ -145,23 +181,26 @@ function triggerCloudPush() {
         return;
     }
     setSyncStatus('Syncing...');
-    
-    const payload = { config: db, inventory: inventory };
-    
-    fetch(BACKEND_API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-    })
-    .then(() => {
-        setSyncStatus('Synced');
-        console.log("State and Catalog configurations successfully synced to Google Sheets.");
-    })
-    .catch(err => {
-        setSyncStatus('Failed');
-        console.error("Cloud push transmission failed:", err);
-    });
+    const payload = JSON.stringify({ config: db, inventory });
+    const revision = localRevision;
+
+    // Serialize writes so an older snapshot cannot arrive after a newer one.
+    cloudPushQueue = cloudPushQueue
+        .catch(() => undefined)
+        .then(() => fetch(BACKEND_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: payload
+        }))
+        .then(response => {
+            if (!response.ok) throw new Error(`Cloud push failed (${response.status}).`);
+            if (revision === localRevision) setSyncStatus('Synced');
+            console.log("State and Catalog configurations successfully synced to Google Sheets.");
+        })
+        .catch(err => {
+            if (revision === localRevision) setSyncStatus('Failed');
+            console.error("Cloud push transmission failed:", err);
+        });
 }
 
 function pullDatabaseFromSheet() {
@@ -171,43 +210,51 @@ function pullDatabaseFromSheet() {
         return;
     }
     setSyncStatus('Syncing...');
+    const requestId = ++latestPullRequest;
+    const revisionAtRequest = localRevision;
     
     fetch(BACKEND_API_URL)
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) throw new Error(`Cloud pull failed (${res.status}).`);
+        return res.json();
+    })
     .then(data => {
-        if (data && !data.error) {
-            if (data.config && data.inventory) {
-                db = normalizeDatabase(data.config);
-                inventory = data.inventory.map(row => {
-                    const sanitizedRow = {};
-                    Object.keys(row).forEach(key => { sanitizedRow[key.trim()] = row[key]; });
-                    return sanitizedRow;
-                });
-                
-                alphabetizeCatalogItems();
-                localStorage.setItem('gk_v7_config', JSON.stringify(db));
-                localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
-            } else {
-                const rawArr = Array.isArray(data) ? data : (data.inventory || []);
-                inventory = rawArr.map(row => {
-                    const sanitizedRow = {};
-                    Object.keys(row).forEach(key => { sanitizedRow[key.trim()] = row[key]; });
-                    return sanitizedRow;
-                });
-                localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
+        if (!data || data.error) {
+            throw new Error(data?.error || 'Cloud returned an invalid response.');
+        }
+        if (requestId !== latestPullRequest || revisionAtRequest !== localRevision) {
+            setSyncStatus('Local changes pending');
+            return;
+        }
+        if (data.config && data.inventory) {
+            if (!Array.isArray(data.inventory)) {
+                throw new Error('Cloud returned an invalid inventory format.');
             }
+            db = normalizeDatabase(data.config);
+            inventory = normalizeInventory(data.inventory);
 
-            setSyncStatus('Synced');
-            initDashboardDropdowns();
-            renderDashboardLedger();
-            
-            if(!document.getElementById('screen-reports').classList.contains('hidden')) {
-                const isBillScreenActive = !document.getElementById('vendor-bill-scope').disabled;
-                if(isBillScreenActive) {
-                    document.getElementById('btn-generate-bill').click();
-                } else {
-                    document.getElementById('btn-generate-rep').click();
-                }
+            alphabetizeCatalogItems();
+            localStorage.setItem('gk_v7_config', JSON.stringify(db));
+            localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
+        } else {
+            const rawArr = Array.isArray(data) ? data : data.inventory;
+            if (!Array.isArray(rawArr)) {
+                throw new Error('Cloud returned an invalid inventory format.');
+            }
+            inventory = normalizeInventory(rawArr);
+            localStorage.setItem('gk_v7_inventory', JSON.stringify(inventory));
+        }
+
+        setSyncStatus('Synced');
+        initDashboardDropdowns();
+        renderDashboardLedger();
+
+        if(!document.getElementById('screen-reports').classList.contains('hidden')) {
+            const isBillScreenActive = !document.getElementById('vendor-bill-scope').disabled;
+            if(isBillScreenActive) {
+                document.getElementById('btn-generate-bill').click();
+            } else {
+                document.getElementById('btn-generate-rep').click();
             }
         }
     })
