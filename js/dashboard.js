@@ -47,7 +47,7 @@ function initDashboardDropdowns() {
     sortedCategories.forEach(c => mainCat.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`);
     mainCat.innerHTML += `<option value="__NEW_CAT__">+ Add New Category...</option>`;
     
-    mainUnit.innerHTML = '';
+    mainUnit.innerHTML = '<option value="" selected>-- None --</option>';
     db.units.forEach(u => mainUnit.innerHTML += `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
     mainUnit.innerHTML += `<option value="__NEW_UNIT__">+ Add New...</option>`;
     flyUnitInput.classList.add('hidden');
@@ -67,20 +67,12 @@ function syncItemsDropdown() {
     mainItem.innerHTML += `<option value="__NEW_ITEM__">+ Add New Item...</option>`;
     flyItemDiv.classList.add('hidden');
 
-    if(cat === "Utilities / Gas" || cat === "Society Maintenance") {
-        mainQty.disabled = true;
-        mainUnit.disabled = true;
-        mainQty.value = 1;
-        mainUnit.value = "Nos";
-        lblQty.classList.add('opacity-40');
-        lblUnit.classList.add('opacity-40');
-    } else {
-        mainQty.disabled = false;
-        mainUnit.disabled = false;
-        mainQty.value = "";
-        lblQty.classList.remove('opacity-40');
-        lblUnit.classList.remove('opacity-40');
-    }
+    mainQty.disabled = false;
+    mainUnit.disabled = false;
+    mainQty.value = "";
+
+    lblQty.classList.remove('opacity-40');
+    lblUnit.classList.remove('opacity-40');
 }
 
 function syncContributionControls() {
@@ -153,10 +145,6 @@ document.getElementById('manual-form').addEventListener('submit', (e) => {
     if (amtInput === "" || isNaN(parseFloat(amtInput)) || parseFloat(amtInput) < 0) {
         validationErrors.push("• Please enter a valid numerical Amount (₹0 or more).");
     }
-    if (!mainQty.disabled && (qtyInput === "" || isNaN(parseFloat(qtyInput)) || parseFloat(qtyInput) < 0)) {
-        validationErrors.push("• Please enter a valid numerical Quantity (0 or more).");
-    }
-    if (!unit) validationErrors.push("• Please select or enter a Unit.");
 
     if (validationErrors.length > 0) {
         alert("⚠️ Incomplete Entry:\n\n" + validationErrors.join("\n"));

@@ -40,33 +40,105 @@ function printReport(type) {
 
 <style>
 
-body{
-    font-family:Arial,Helvetica,sans-serif;
-    margin:20px;
+@page {
+    size: A5 portrait;
+    margin: 7mm;
 }
 
-table{
-    width:100%;
-    border-collapse:collapse;
+html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
-th,td{
-    border:1px solid #999;
-    padding:8px;
-    font-size:12px;
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #000;
+    background: #fff;
+    font-size: 9px;
+    line-height: 1.2;
 }
 
-th{
-    background:#f3f4f6;
+* {
+    box-sizing: border-box;
 }
 
-h2,h3{
-    text-align:center;
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
 }
 
-.no-print,
-button {
+th,
+td {
+    border: 1px solid #999;
+    padding: 2px 3px !important;
+    font-size: 8.5px !important;
+    line-height: 1.15 !important;
+}
+
+th {
+    background: #f3f4f6 !important;
+    font-weight: bold;
+}
+
+h2 {
+    font-size: 14px !important;
+    margin: 2px 0 !important;
+}
+
+h3 {
+    font-size: 11px !important;
+    margin: 2px 0 !important;
+}
+
+h4 {
+    font-size: 9px !important;
+    margin: 2px 0 !important;
+    padding-bottom: 1px !important;
+}
+
+p {
+    margin: 1px 0 !important;
+}
+
+button,
+.no-print {
     display: none !important;
+}
+
+.border-b-2 {
+    border-bottom-width: 1px !important;
+}
+
+.mb-1,
+.mb-1\\.5,
+.mb-2,
+.mb-3,
+.mb-4,
+.mb-5 {
+    margin-bottom: 3px !important;
+}
+
+.py-1,
+.py-0\\.5,
+.py-2,
+.py-2\\.5 {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+
+.p-1,
+.p-2,
+.p-3,
+.p-4 {
+    padding: 2px !important;
+}
+
+.shadow-none,
+.shadow-2xs,
+.shadow-3xs {
+    box-shadow: none !important;
 }
 
 </style>
@@ -90,47 +162,6 @@ window.onload = function () {
     `);
 
     printWindow.document.close();
-
-}
-
-async function shareReport(type) {
-
-    const report = getReportElement(type);
-
-    if (!report || !report.innerText.trim()) {
-        alert("Please generate the report first.");
-        return;
-    }
-
-    const title =
-        type === "vendor"
-            ? "Vendor Bill"
-            : "Son Contribution Statement";
-
-    if (navigator.share) {
-
-        try {
-
-            await navigator.share({
-
-                title,
-
-                text: report.innerText.trim()
-
-            });
-
-        } catch (err) {
-
-            // User cancelled sharing
-
-        }
-
-    } else {
-
-        alert("Sharing is not supported on this device.");
-
-    }
-
 }
 
 const repFilterType = document.getElementById('rep-filter-type');
