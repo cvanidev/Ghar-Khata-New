@@ -74,7 +74,7 @@ td {
     border: 1px solid #999;
     padding: 2.5px 3px !important;
     font-size: 9.5px !important;
-    line-height: 1.2 !important;
+    line-height: 1.3 !important;
 }
 
 th {
