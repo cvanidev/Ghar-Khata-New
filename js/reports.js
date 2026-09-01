@@ -72,7 +72,7 @@ table {
 th,
 td {
     border: 1px solid #999;
-    padding: 2.5px 3px !important;
+    padding: 4px 3px !important;
     font-size: 9.5px !important;
     line-height: 1.3 !important;
 }
@@ -444,15 +444,28 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
 
             </div>
             <div style="background-color: #ffffff !important; color: #000000 !important;" class="p-1 border-0 shadow-none">
-                <div class="border-b-2 border-slate-900 pb-1 mb-1.5 flex justify-between items-end">
+                <div class="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between items-center">
+
                     <div>
-                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-950">📄 Vendor Account Statement</h3>
-                        <p class="text-[9px] font-semibold text-slate-600">${cleanFrom} to ${cleanTo}</p>
+                        <h3 class="text-sm font-black uppercase tracking-wide text-slate-950">
+                            📄 Vendor Account Statement
+                        </h3>
                     </div>
-                    <div class="text-right">
-                        <span class="text-[8px] uppercase font-black text-slate-500 block">Total Payable</span>
-                        <span class="text-sm font-black text-slate-950">₹${grandTotal.toFixed(0)}</span>
+
+                    <div class="text-right leading-tight">
+                        <p class="text-[9px] font-semibold text-slate-600 mb-1">
+                            ${cleanFrom} to ${cleanTo}
+                        </p>
+
+                        <span class="text-[9px] uppercase font-black text-slate-500 block">
+                            Total Payable
+                        </span>
+
+                        <span class="text-lg font-black text-slate-950">
+                            ₹${grandTotal.toFixed(0)}
+                        </span>
                     </div>
+
                 </div>
                 ${finalTablesBlock}
             </div>
