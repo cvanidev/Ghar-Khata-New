@@ -181,7 +181,7 @@ button,
 .print-date {
     font-size: 9px;
     font-weight: 600;
-    margin-top: 2px;
+    margin-top: 5px;
 }
 
 .print-header-summary {
@@ -454,7 +454,7 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
         const paperRows = paperItems.map(buildPaperRow).join('');
         finalTablesBlock += `
             <div class="mb-1.5">
-                <h4 class="text-[10px] font-black uppercase text-slate-900 border-b border-slate-400 pb-0.5 mb-0.5">
+                <h4 class="text-[10px] font-black uppercase text-slate-900 border-b border-slate-400 pb-1 mb-1">
                     📰 Newspaper Delivery Statement (Subtotal: ₹${totalPaperCost.toFixed(0)})
                 </h4>
                 ${renderTable(paperRows)}
