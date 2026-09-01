@@ -55,8 +55,8 @@ body {
     font-family: Arial, Helvetica, sans-serif;
     color: #000;
     background: #fff;
-    font-size: 9px;
-    line-height: 1.2;
+    font-size: 10px;
+    line-height: 1.25;
 }
 
 * {
@@ -72,9 +72,9 @@ table {
 th,
 td {
     border: 1px solid #999;
-    padding: 2px 3px !important;
-    font-size: 8.5px !important;
-    line-height: 1.15 !important;
+    padding: 2.5px 3px !important;
+    font-size: 9.5px !important;
+    line-height: 1.2 !important;
 }
 
 th {
@@ -139,6 +139,22 @@ button,
 .shadow-2xs,
 .shadow-3xs {
     box-shadow: none !important;
+}
+
+.text-sm {
+    font-size: 14px !important;
+}
+
+.text-xs {
+    font-size: 9px !important;
+}
+
+.text-\\[8px\\] {
+    font-size: 9px !important;
+}
+
+.text-\\[9px\\] {
+    font-size: 10px !important;
 }
 
 </style>
