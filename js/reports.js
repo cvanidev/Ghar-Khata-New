@@ -157,6 +157,51 @@ button,
     font-size: 10px !important;
 }
 
+.print-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #000;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+.print-header-left {
+    text-align: left;
+}
+
+.print-header-title {
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.print-date {
+    font-size: 9px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.print-header-summary {
+    text-align: right;
+    min-width: 100px;
+}
+
+.print-total-label {
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.print-total {
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
 </style>
 
 </head>
@@ -444,26 +489,26 @@ document.getElementById('btn-generate-bill').addEventListener('click', () => {
 
             </div>
             <div style="background-color: #ffffff !important; color: #000000 !important;" class="p-1 border-0 shadow-none">
-                <div class="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between items-center">
+                <div class="print-header">
 
-                    <div>
-                        <h3 class="text-sm font-black uppercase tracking-wide text-slate-950">
+                    <div class="print-header-left">
+                        <div class="print-header-title">
                             📄 Vendor Account Statement
-                        </h3>
+                        </div>
+
+                        <div class="print-date">
+                            ${cleanFrom} to ${cleanTo}
+                        </div>
                     </div>
 
-                    <div class="text-right leading-tight">
-                        <p class="text-[9px] font-semibold text-slate-600 mb-1">
-                            ${cleanFrom} to ${cleanTo}
-                        </p>
-
-                        <span class="text-[9px] uppercase font-black text-slate-500 block">
+                    <div class="print-header-summary">
+                        <div class="print-total-label">
                             Total Payable
-                        </span>
+                        </div>
 
-                        <span class="text-lg font-black text-slate-950">
+                        <div class="print-total">
                             ₹${grandTotal.toFixed(0)}
-                        </span>
+                        </div>
                     </div>
 
                 </div>
